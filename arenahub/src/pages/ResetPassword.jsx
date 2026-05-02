@@ -5,14 +5,29 @@ const ResetPassword = () => {
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Send email to Java backend to dispatch recovery link
-    console.log("Requesting password reset for:", email);
-    alert("If an account exists, a reset link will be sent.");
-    
-    // Redirects the user back to the login page after submission
-    navigate('/login');
+    try {
+      const response = await fetch('http://localhost:8080/api/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message || "If an account exists, a reset link will be sent.");
+        navigate('/login');
+      } else {
+        alert(data.error || 'Failed to send reset link');
+      }
+    } catch (error) {
+      console.error('Connection failed:', error);
+      alert('A network error occurred while trying to request password reset.');
+    }
   };
 
   return (
