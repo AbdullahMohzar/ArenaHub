@@ -171,6 +171,17 @@ public class AdminServlet extends HttpServlet {
                                 }
                             }
                         }
+
+                        // 3. Log Wallet Transaction for refund
+                        String txnSql = "INSERT INTO WalletTransactions (WalletID, TransactionType, Amount, Description) " +
+                                        "SELECT WalletID, 'REFUND', ?, ? FROM Wallets WHERE UserID = ?";
+                        try (PreparedStatement txnStmt = conn.prepareStatement(txnSql)) {
+                            txnStmt.setDouble(1, amount);
+                            txnStmt.setString(2, "Admin refund for booking #" + bookingId);
+                            txnStmt.setInt(3, targetUserId);
+                            txnStmt.executeUpdate();
+                        }
+
                         conn.commit();
                         resp.setStatus(HttpServletResponse.SC_OK);
                         resp.getWriter().write("{\"message\":\"Refund processed successfully!\"}");

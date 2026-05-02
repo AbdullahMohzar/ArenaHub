@@ -95,6 +95,9 @@
                 <configuration>
                     <path>/</path>
                     <port>8080</port>
+                    <staticContextDocbasePaths>
+                        <staticContextDocbasePath>/uploads=d:/ArenaHub/uploads</staticContextDocbasePath>
+                    </staticContextDocbasePaths>
                 </configuration>
             </plugin>
         </plugins>

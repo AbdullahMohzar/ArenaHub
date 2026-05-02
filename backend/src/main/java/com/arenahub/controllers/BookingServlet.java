@@ -125,33 +125,40 @@ public class BookingServlet extends HttpServlet {
             }
         }
 
-        // ── BRANCH 3: User's own bookings ──
+        // ── BRANCH 3: Owner's bookings or User's own bookings ──
         String userIdStr = req.getParameter("userId");
-        if (userIdStr == null || userIdStr.isEmpty()) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\":\"userId parameter is required\"}");
-            return;
-        }
+        String ownerIdStr = req.getParameter("ownerId");
 
-        int userId;
-        try {
-            userId = Integer.parseInt(userIdStr);
-        } catch (NumberFormatException e) {
+        if ((userIdStr == null || userIdStr.isEmpty()) && (ownerIdStr == null || ownerIdStr.isEmpty())) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            resp.getWriter().write("{\"error\":\"Invalid userId format\"}");
+            resp.getWriter().write("{\"error\":\"userId or ownerId parameter is required\"}");
             return;
         }
 
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String sql = "SELECT b.BookingID, b.UserID, b.TurfID, b.BookingDate, b.StartTime, b.EndTime, " +
-                         "b.Status, b.PaymentStatus, b.Visibility, b.MaxPlayers, b.CurrentPlayers, " +
-                         "t.Name AS TurfName, t.PricePerHour " +
-                         "FROM Bookings b " +
-                         "JOIN Turfs t ON b.TurfID = t.TurfID " +
-                         "WHERE b.UserID = ? ORDER BY b.BookingDate DESC, b.StartTime";
+            String sql;
+            int paramId;
+
+            if (ownerIdStr != null && !ownerIdStr.isEmpty()) {
+                paramId = Integer.parseInt(ownerIdStr);
+                sql = "SELECT b.BookingID, b.UserID, b.TurfID, b.BookingDate, b.StartTime, b.EndTime, " +
+                      "b.Status, b.PaymentStatus, b.Visibility, b.MaxPlayers, b.CurrentPlayers, " +
+                      "t.Name AS TurfName, t.PricePerHour " +
+                      "FROM Bookings b " +
+                      "JOIN Turfs t ON b.TurfID = t.TurfID " +
+                      "WHERE t.OwnerID = ? ORDER BY b.BookingDate DESC, b.StartTime";
+            } else {
+                paramId = Integer.parseInt(userIdStr);
+                sql = "SELECT b.BookingID, b.UserID, b.TurfID, b.BookingDate, b.StartTime, b.EndTime, " +
+                      "b.Status, b.PaymentStatus, b.Visibility, b.MaxPlayers, b.CurrentPlayers, " +
+                      "t.Name AS TurfName, t.PricePerHour " +
+                      "FROM Bookings b " +
+                      "JOIN Turfs t ON b.TurfID = t.TurfID " +
+                      "WHERE b.UserID = ? ORDER BY b.BookingDate DESC, b.StartTime";
+            }
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setInt(1, userId);
+                stmt.setInt(1, paramId);
                 try (ResultSet rs = stmt.executeQuery()) {
                     JsonArray jsonArray = new JsonArray();
                     while (rs.next()) {
@@ -211,11 +218,12 @@ public class BookingServlet extends HttpServlet {
             String startTime = jsonRequest.get("startTime").getAsString();
             String endTime = jsonRequest.get("endTime").getAsString();
 
-            // Optional fields for Phase 2 (Captain features)
+            // Optional fields for Phase 2 (Captain features) & Defaulting Payment Status
             String visibility = jsonRequest.has("visibility") ? jsonRequest.get("visibility").getAsString() : "PRIVATE";
             int maxPlayers = jsonRequest.has("maxPlayers") ? jsonRequest.get("maxPlayers").getAsInt() : 10;
             boolean isRecurring = jsonRequest.has("isRecurring") && jsonRequest.get("isRecurring").getAsBoolean();
             JsonArray equipmentArr = jsonRequest.has("equipment") ? jsonRequest.getAsJsonArray("equipment") : null;
+            String paymentStatus = "PAID"; // Assuming default PAID for now or passing it via jsonRequest.has("paymentStatus")
 
             // Date/Time Validation
             java.time.LocalDate bDate = java.time.LocalDate.parse(bookingDate);
@@ -256,17 +264,18 @@ public class BookingServlet extends HttpServlet {
 
                     // Insert booking
                     String sql = "INSERT INTO Bookings (UserID, TurfID, BookingDate, StartTime, EndTime, Status, PaymentStatus, Visibility, MaxPlayers, CurrentPlayers, IsRecurring, RecurrenceGroupID) " +
-                                 "VALUES (?, ?, ?, ?, ?, 'CONFIRMED', 'PAID', ?, ?, 1, ?, ?)";
+                                 "VALUES (?, ?, ?, ?, ?, 'CONFIRMED', ?, ?, ?, 1, ?, ?)";
                     try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                         stmt.setInt(1, userId);
                         stmt.setInt(2, turfId);
                         stmt.setString(3, currentDateStr);
                         stmt.setString(4, startTime);
                         stmt.setString(5, endTime);
-                        stmt.setString(6, visibility);
-                        stmt.setInt(7, maxPlayers);
-                        stmt.setBoolean(8, isRecurring);
-                        stmt.setString(9, recurrenceGroupId);
+                        stmt.setString(6, paymentStatus);
+                        stmt.setString(7, visibility);
+                        stmt.setInt(8, maxPlayers);
+                        stmt.setBoolean(9, isRecurring);
+                        stmt.setString(10, recurrenceGroupId);
 
                         int rows = stmt.executeUpdate();
                         if (rows > 0) {
@@ -350,17 +359,99 @@ public class BookingServlet extends HttpServlet {
 
                 // ── ACTION: CANCEL ──
                 if ("CANCEL".equalsIgnoreCase(action)) {
-                    String sql = "UPDATE Bookings SET Status = 'CANCELLED' WHERE BookingID = ?";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        stmt.setInt(1, bookingId);
-                        int rows = stmt.executeUpdate();
-                        if (rows > 0) {
-                            resp.setStatus(HttpServletResponse.SC_OK);
-                            resp.getWriter().write("{\"message\":\"Booking cancelled successfully\"}");
-                        } else {
-                            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                            resp.getWriter().write("{\"error\":\"Booking not found\"}");
+                    boolean success = false;
+                    try {
+                        conn.setAutoCommit(false);
+
+                        // 1. Fetch booking details to calculate refund
+                        int userId = -1;
+                        double refundAmount = 0.0;
+                        String status = "";
+                        String fetchSql = "SELECT b.UserID, b.Status, TIMESTAMPDIFF(MINUTE, b.StartTime, b.EndTime) / 60.0 AS Duration, t.PricePerHour " +
+                                          "FROM Bookings b JOIN Turfs t ON b.TurfID = t.TurfID WHERE b.BookingID = ?";
+                        try (PreparedStatement stmt = conn.prepareStatement(fetchSql)) {
+                            stmt.setInt(1, bookingId);
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) {
+                                    userId = rs.getInt("UserID");
+                                    status = rs.getString("Status");
+                                    double duration = rs.getDouble("Duration");
+                                    double pricePerHour = rs.getDouble("PricePerHour");
+                                    refundAmount = duration * pricePerHour;
+                                }
+                            }
                         }
+
+                        if (userId != -1 && !"CANCELLED".equals(status)) {
+                            // 2. Update booking status
+                            String cancelSql = "UPDATE Bookings SET Status = 'CANCELLED' WHERE BookingID = ?";
+                            try (PreparedStatement stmt = conn.prepareStatement(cancelSql)) {
+                                stmt.setInt(1, bookingId);
+                                stmt.executeUpdate();
+                            }
+
+                            // 3. Process Refund
+                            String walletSql = "UPDATE Wallets SET Balance = Balance + ? WHERE UserID = ?";
+                            try (PreparedStatement stmt = conn.prepareStatement(walletSql)) {
+                                stmt.setDouble(1, refundAmount);
+                                stmt.setInt(2, userId);
+                                stmt.executeUpdate();
+                            }
+
+                            // 4. Log Wallet Transaction
+                            String logSql = "INSERT INTO WalletTransactions (WalletID, TransactionType, Amount, Description) " +
+                                            "SELECT WalletID, 'REFUND', ?, ? FROM Wallets WHERE UserID = ?";
+                            try (PreparedStatement stmt = conn.prepareStatement(logSql)) {
+                                stmt.setDouble(1, refundAmount);
+                                stmt.setString(2, "Refund for cancelled booking #" + bookingId);
+                                stmt.setInt(3, userId);
+                                stmt.executeUpdate();
+                            }
+
+                            conn.commit();
+                            success = true;
+                        } else {
+                            conn.rollback();
+                        }
+                    } catch (SQLException ex) {
+                        conn.rollback();
+                        throw ex;
+                    } finally {
+                        conn.setAutoCommit(true);
+                    }
+
+                    if (success) {
+                        resp.setStatus(HttpServletResponse.SC_OK);
+                        resp.getWriter().write("{\"message\":\"Booking cancelled and refunded successfully\"}");
+                    } else {
+                        resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        resp.getWriter().write("{\"error\":\"Could not cancel booking\"}");
+                    }
+                }
+                
+                // ── ACTION: TOGGLE_VISIBILITY ──
+                else if ("TOGGLE_VISIBILITY".equalsIgnoreCase(action)) {
+                    String checkSql = "SELECT Visibility FROM Bookings WHERE BookingID = ?";
+                    String currentVis = null;
+                    try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                        checkStmt.setInt(1, bookingId);
+                        try (ResultSet rs = checkStmt.executeQuery()) {
+                            if (rs.next()) currentVis = rs.getString("Visibility");
+                        }
+                    }
+                    if (currentVis != null) {
+                        String newVis = "PUBLIC".equals(currentVis) ? "PRIVATE" : "PUBLIC";
+                        String sql = "UPDATE Bookings SET Visibility = ? WHERE BookingID = ?";
+                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                            stmt.setString(1, newVis);
+                            stmt.setInt(2, bookingId);
+                            stmt.executeUpdate();
+                            resp.setStatus(HttpServletResponse.SC_OK);
+                            resp.getWriter().write("{\"message\":\"Visibility updated to " + newVis + "\"}");
+                        }
+                    } else {
+                        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        resp.getWriter().write("{\"error\":\"Booking not found\"}");
                     }
                 }
 

@@ -53,6 +53,10 @@ public class AuthFilter implements Filter {
             chain.doFilter(request, response);
             return;
         }
+        if (path.contains("/uploads/")) {
+            chain.doFilter(request, response);
+            return;
+        }
         
         // Authorization header check
         String authHeader = req.getHeader("Authorization");

@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS Messages (
+    MessageID INT PRIMARY KEY AUTO_INCREMENT,
+    SenderID INT NOT NULL,
+    ReceiverID INT,
+    BookingID INT,
+    Content TEXT NOT NULL,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (SenderID) REFERENCES Users(UserID),
+    FOREIGN KEY (ReceiverID) REFERENCES Users(UserID),
+    FOREIGN KEY (BookingID) REFERENCES Bookings(BookingID)
+);

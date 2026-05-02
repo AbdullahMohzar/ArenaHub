@@ -9,26 +9,16 @@ const NAV_CONFIG = {
     { label: 'Browse Venues', path: '/venues', icon: '🏟️' },
   ],
   PLAYER: [
-    { label: 'Browse Turfs', path: '/venues', icon: '🏟️' },
-    { label: 'Joined Games', path: '/my-games', icon: '⚽' },
-    { label: 'My Wallet', path: '/wallet', icon: '💰' },
-    { label: 'My Bookings', path: '/dashboard', icon: '📋' },
+    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
   ],
   CAPTAIN: [
-    { label: 'Squad Hub', path: '/dashboard', icon: '🛡️' },
-    { label: 'Browse Turfs', path: '/venues', icon: '🏟️' },
-    { label: 'Rent Equipment', path: '/equipment', icon: '🎽' },
-    { label: 'Subscriptions', path: '/subscriptions', icon: '🔄' },
+    { label: 'Dashboard', path: '/dashboard', icon: '🛡️' },
   ],
   OWNER: [
-    { label: 'Venue Manager', path: '/dashboard', icon: '🏢' },
-    { label: 'Calendar', path: '/calendar', icon: '📅' },
-    { label: 'Pricing Rules', path: '/pricing', icon: '💲' },
+    { label: 'Dashboard', path: '/dashboard', icon: '🏢' },
   ],
   ADMIN: [
-    { label: 'System Control', path: '/dashboard', icon: '⚙️' },
-    { label: 'User Accounts', path: '/admin/users', icon: '👥' },
-    { label: 'Disputes', path: '/admin/disputes', icon: '⚖️' },
+    { label: 'Dashboard', path: '/dashboard', icon: '⚙️' },
   ],
 };
 
@@ -47,6 +37,7 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const profileRef = useRef(null);
 
   // Check auth state on mount and route changes
@@ -56,6 +47,27 @@ const Navbar = () => {
     setIsLoggedIn(!!token);
     setUserRole(role ? role.toUpperCase() : 'GUEST');
   }, [location]);
+
+  // Poll for unread messages (for navbar badge)
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const t = localStorage.getItem('token');
+      const r = (localStorage.getItem('userRole') || '').toUpperCase();
+      if (!t || r === 'ADMIN') return;
+      try {
+        const res = await fetch('http://localhost:8080/api/chat/contacts', {
+          headers: { 'Authorization': `Bearer ${t}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadCount(data.reduce((sum, c) => sum + (c.unreadCount || 0), 0));
+        }
+      } catch (err) { /* silent */ }
+    };
+    fetchUnread();
+    const poll = setInterval(fetchUnread, 10000);
+    return () => clearInterval(poll);
+  }, [isLoggedIn]);
 
   // Scroll effect for navbar
   useEffect(() => {
@@ -137,6 +149,25 @@ const Navbar = () => {
                   <span className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.color}`}>
                     {badge.label}
                   </span>
+                )}
+
+                {/* Chat Button — opens global chat sidebar */}
+                {userRole !== 'ADMIN' && (
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent('toggle-chat-sidebar'))}
+                    className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-indigo-500/20 transition-all group"
+                    id="navbar-chat-button"
+                    title="Messages"
+                  >
+                    <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 min-w-[18px] rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse shadow-lg">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
                 )}
 
                 <div className="relative" ref={profileRef}>
@@ -259,7 +290,20 @@ const Navbar = () => {
               </div>
             )}
             {isLoggedIn && (
-              <div className="pt-3 border-t border-white/10">
+              <div className="pt-3 border-t border-white/10 space-y-1">
+                {userRole !== 'ADMIN' && (
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); window.dispatchEvent(new CustomEvent('toggle-chat-sidebar')); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5"
+                  >
+                    <span>💬</span> Messages
+                    {unreadCount > 0 && (
+                      <span className="ml-auto w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-rose-400 hover:bg-rose-500/10"

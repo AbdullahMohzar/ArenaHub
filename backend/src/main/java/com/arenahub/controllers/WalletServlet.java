@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.arenahub.utils.DatabaseConnection;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 @WebServlet("/api/wallet")
@@ -66,7 +67,25 @@ public class WalletServlet extends HttpServlet {
                         JsonObject wallet = new JsonObject();
                         wallet.addProperty("walletId", rs.getInt("WalletID"));
                         wallet.addProperty("balance", rs.getDouble("Balance"));
-                        wallet.addProperty("currency", rs.getString("Currency"));
+                        // Fetch transactions
+                        JsonArray transactions = new JsonArray();
+                        String txnSql = "SELECT TransactionID, Amount, TransactionType, Description, CreatedAt FROM WalletTransactions WHERE WalletID = ? ORDER BY CreatedAt DESC LIMIT 50";
+                        try (PreparedStatement txnStmt = conn.prepareStatement(txnSql)) {
+                            txnStmt.setInt(1, rs.getInt("WalletID"));
+                            try (ResultSet txnRs = txnStmt.executeQuery()) {
+                                while (txnRs.next()) {
+                                    JsonObject t = new JsonObject();
+                                    t.addProperty("id", txnRs.getInt("TransactionID"));
+                                    t.addProperty("amount", txnRs.getDouble("Amount"));
+                                    t.addProperty("type", txnRs.getString("TransactionType"));
+                                    t.addProperty("description", txnRs.getString("Description"));
+                                    t.addProperty("date", txnRs.getString("CreatedAt"));
+                                    transactions.add(t);
+                                }
+                            }
+                        }
+                        wallet.add("transactions", transactions);
+
                         resp.setStatus(HttpServletResponse.SC_OK);
                         resp.getWriter().write(wallet.toString());
                     } else {
@@ -80,6 +99,7 @@ public class WalletServlet extends HttpServlet {
                                 wallet.addProperty("walletId", keys.next() ? keys.getInt(1) : 0);
                                 wallet.addProperty("balance", 0.00);
                                 wallet.addProperty("currency", "PKR");
+                                wallet.add("transactions", new JsonArray());
                                 resp.setStatus(HttpServletResponse.SC_OK);
                                 resp.getWriter().write(wallet.toString());
                             }

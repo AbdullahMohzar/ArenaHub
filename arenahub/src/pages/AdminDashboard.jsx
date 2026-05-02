@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const API = 'http://localhost:8080';
 
@@ -8,9 +8,15 @@ const AdminDashboard = () => {
   const token = localStorage.getItem('token');
   
   const [activeTab, setActiveTab] = useState('users');
+  const location = useLocation();
   const [users, setUsers] = useState([]);
   const [disputes, setDisputes] = useState([]);
   const [processingId, setProcessingId] = useState(null);
+
+  useEffect(() => {
+    if (location.pathname === '/admin/disputes') setActiveTab('disputes');
+    else if (location.pathname === '/admin/users' || location.pathname === '/dashboard') setActiveTab('users');
+  }, [location.pathname]);
 
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 

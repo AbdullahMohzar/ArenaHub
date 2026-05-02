@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import ChatSidebar from './components/ChatSidebar';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
@@ -31,6 +32,7 @@ function App() {
   return (
     <Router>
       <Navbar />
+      <ChatSidebar />
       <main className="pt-16">
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -46,6 +48,16 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          {/* Navbar routing paths */}
+          <Route path="/venues" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/my-games" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/wallet" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/equipment" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/subscriptions" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/calendar" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/pricing" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
+          <Route path="/admin/disputes" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
         </Routes>
       </main>
     </Router>

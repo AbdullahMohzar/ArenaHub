@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import ChatWidget from '../components/ChatWidget';
+import TurfDetailModal from '../components/TurfDetailModal';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -17,9 +19,30 @@ const CaptainDashboard = () => {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [activeTab, setActiveTab] = useState('book');
+  const location = useLocation();
+  const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
+  const [toppingUp, setToppingUp] = useState(false);
+  const [activeChatBookingId, setActiveChatBookingId] = useState(null);
+
+  // Helper to open the global chat sidebar for direct messages
+  const openChatSidebar = (contactUserId, contactName, contactRole) => {
+    window.dispatchEvent(new CustomEvent('open-chat-sidebar', {
+      detail: { contactUserId, contactName, contactRole }
+    }));
+  };
+
+  useEffect(() => {
+    if (location.pathname === '/venues') setActiveTab('book');
+    else if (location.pathname === '/equipment') setActiveTab('book');
+    else if (location.pathname === '/subscriptions') setActiveTab('book');
+    else if (location.pathname === '/dashboard') setActiveTab('bookings');
+    else if (location.pathname === '/wallet') setActiveTab('wallet');
+  }, [location.pathname]);
 
   // Search & Filter
   const [search, setSearch] = useState('');
+  const [sportFilter, setSportFilter] = useState('All');
+  const [maxPrice, setMaxPrice] = useState(5000);
 
   // Booking form
   const [bookingForm, setBookingForm] = useState({
@@ -33,15 +56,22 @@ const CaptainDashboard = () => {
     selectedEquipment: [] // Array of { equipmentId, quantity, name, pricePerHour }
   });
 
+  // Turf Detail Modal
+  const [selectedTurf, setSelectedTurf] = useState(null);
+
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   // ── Fetchers ──
   const fetchTurfs = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/turfs${search ? `?search=${search}` : ''}`);
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (sportFilter !== 'All') params.append('sportType', sportFilter);
+      if (maxPrice < 5000) params.append('maxPrice', maxPrice);
+      const res = await fetch(`${API}/api/turfs?${params}`);
       if (res.ok) setTurfs(await res.json());
     } catch (err) { console.error(err); }
-  }, [search]);
+  }, [search, sportFilter, maxPrice]);
 
   const fetchBookings = async () => {
     if (!userId || !token) return navigate('/login');
@@ -59,8 +89,15 @@ const CaptainDashboard = () => {
     } catch (err) { console.error(err); }
   };
 
+  const fetchWallet = async () => {
+    try {
+      const res = await fetch(`${API}/api/wallet?userId=${userId}`, { headers });
+      if (res.ok) setWallet(await res.json());
+    } catch (err) { console.error(err); }
+  };
+
   useEffect(() => { fetchTurfs(); }, [fetchTurfs]);
-  useEffect(() => { fetchBookings(); fetchEquipment(); }, []);
+  useEffect(() => { fetchBookings(); fetchEquipment(); fetchWallet(); }, []);
 
   // ── Conflict fetch ──
   const fetchConflicts = async (turfId, date) => {
@@ -167,9 +204,39 @@ const CaptainDashboard = () => {
         method: 'PUT', headers,
         body: JSON.stringify({ bookingId, action: 'CANCEL' })
       });
+      if (res.ok) {
+        fetchBookings();
+        fetchWallet();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const toggleVisibility = async (bookingId) => {
+    try {
+      const res = await fetch(`${API}/api/bookings`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ bookingId, action: 'TOGGLE_VISIBILITY' })
+      });
       if (res.ok) fetchBookings();
     } catch (err) { console.error(err); }
   };
+
+  // ── Top up wallet ──
+  const topUpWallet = async (amount) => {
+    setToppingUp(true);
+    try {
+      const res = await fetch(`${API}/api/wallet`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ userId: parseInt(userId), amount })
+      });
+      const data = await res.json();
+      if (res.ok) { fetchWallet(); }
+      else alert(data.error);
+    } catch (err) { console.error(err); }
+    finally { setToppingUp(false); }
+  };
+
+  const sportTypes = ['All', ...new Set(turfs.map(t => t.SportType).filter(Boolean))];
 
   return (
     <div className="min-h-screen bg-arena-950">
@@ -182,11 +249,34 @@ const CaptainDashboard = () => {
         </div>
       )}
 
+      {/* Squad Chat Widget (booking-based group chat only) */}
+      {activeChatBookingId && (
+        <ChatWidget 
+          currentUserId={userId} 
+          bookingId={activeChatBookingId} 
+          onClose={() => setActiveChatBookingId(null)} 
+          title="Squad Chat"
+        />
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col mb-8">
-          <h1 className="text-3xl font-bold text-white">Captain's Dashboard</h1>
-          <p className="text-slate-400 mt-1">Organize matches, secure recurring slots, and rent squad equipment.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Captain's Dashboard</h1>
+            <p className="text-slate-400 mt-1">Organize matches, secure recurring slots, and rent squad equipment.</p>
+          </div>
+          {/* Wallet Card */}
+          <div className="glass rounded-2xl px-6 py-4 flex items-center gap-4">
+            <div>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">Wallet Balance</p>
+              <p className="text-2xl font-bold text-amber-400">Rs. {wallet.balance?.toLocaleString('en-IN') || 0}</p>
+            </div>
+            <button onClick={() => topUpWallet(1000)} disabled={toppingUp}
+              className="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-400 text-sm font-semibold border border-amber-500/30 hover:bg-amber-500/30 disabled:opacity-50 transition-all">
+              {toppingUp ? '...' : '+ Rs. 1,000'}
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -199,32 +289,64 @@ const CaptainDashboard = () => {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'bookings' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
             📋 Squad Bookings
           </button>
+          <button onClick={() => setActiveTab('wallet')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'wallet' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            💰 My Wallet
+          </button>
         </div>
 
         {/* ═══ TAB: Book & Manage ═══ */}
         {activeTab === 'book' && (
           <div className="animate-fade-in-up">
             <div className="glass rounded-2xl p-5 mb-6">
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <input
-                  type="text" placeholder="Search venues by name..." value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                />
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  <input
+                    type="text" placeholder="Search venues by name..." value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  />
+                </div>
+                <select value={sportFilter} onChange={e => setSportFilter(e.target.value)}
+                  className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 appearance-none">
+                  {sportTypes.map(s => <option key={s} value={s} className="bg-arena-900">{s === 'All' ? 'All Sports' : s}</option>)}
+                </select>
+                <div className="flex items-center gap-3 min-w-[200px]">
+                  <span className="text-xs text-slate-400 whitespace-nowrap">Max Rs.{maxPrice}</span>
+                  <input type="range" min="200" max="5000" step="100" value={maxPrice}
+                    onChange={e => setMaxPrice(Number(e.target.value))}
+                    className="flex-1 accent-amber-500 h-1.5" />
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {turfs.map(turf => (
-                <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'hover:border-white/20'}`}>
+                <div key={turf.TurfID} onClick={() => setSelectedTurf(turf)} className={`glass rounded-2xl overflow-hidden transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'hover:border-white/20'} cursor-pointer`}>
+                  {/* Image Header */}
+                  <div className="h-48 bg-slate-800 relative">
+                    {turf.ImageURL ? (
+                      <img src={`${API}${turf.ImageURL}`} alt={turf.Name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-900 to-arena-950">
+                        <span className="text-4xl mb-2">🏟️</span>
+                        <span className="text-amber-400/50 text-sm font-semibold tracking-widest uppercase">ArenaHub Turf</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h3 className="text-xl font-bold text-white">{turf.Name}</h3>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-slate-300 mt-1">{turf.SportType}</span>
                       </div>
-                      <p className="text-xl font-bold text-amber-400">Rs. {turf.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-amber-400">Rs. {turf.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                        <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold border border-indigo-500/30 hover:bg-indigo-500/30 transition-all">
+                          💬 Contact Owner
+                        </button>
+                      </div>
                     </div>
 
                     {bookingForm.turfId === turf.TurfID ? (
@@ -327,7 +449,7 @@ const CaptainDashboard = () => {
                         </div>
                       </div>
                     ) : (
-                      <button onClick={() => setBookingForm({ ...bookingForm, turfId: turf.TurfID })}
+                      <button onClick={(e) => { e.stopPropagation(); setBookingForm({ ...bookingForm, turfId: turf.TurfID }); }}
                         className="w-full mt-2 py-3 rounded-xl bg-white/5 text-white font-medium hover:bg-white/10 border border-white/10 transition-all">
                         Select Venue
                       </button>
@@ -336,6 +458,17 @@ const CaptainDashboard = () => {
                 </div>
               ))}
             </div>
+
+            {/* Turf Detail Modal */}
+            {selectedTurf && (
+              <TurfDetailModal 
+                turf={selectedTurf} 
+                userId={userId} 
+                token={token} 
+                onClose={() => setSelectedTurf(null)} 
+                onBookNow={(t) => setBookingForm({ ...bookingForm, turfId: t.TurfID })} 
+              />
+            )}
           </div>
         )}
 
@@ -360,7 +493,17 @@ const CaptainDashboard = () => {
                 </div>
                 <div className="flex flex-col gap-2 justify-center sm:min-w-[140px]">
                   {b.Status === 'CONFIRMED' && (
-                    <button onClick={() => cancelBooking(b.BookingID)} className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-400 text-sm font-medium hover:bg-rose-500/10 transition-all">Cancel Booking</button>
+                    <>
+                      <button onClick={() => toggleVisibility(b.BookingID)} className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-all ${b.Visibility === 'PUBLIC' ? 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10' : 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10'}`}>
+                        Make {b.Visibility === 'PUBLIC' ? 'Private' : 'Public'}
+                      </button>
+                      {b.Visibility === 'PUBLIC' && (
+                        <button onClick={() => setActiveChatBookingId(b.BookingID)} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all flex items-center justify-center gap-1.5">
+                          💬 Squad Chat
+                        </button>
+                      )}
+                      <button onClick={() => cancelBooking(b.BookingID)} className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-400 text-sm font-medium hover:bg-rose-500/10 transition-all">Cancel Booking</button>
+                    </>
                   )}
                   {b.PaymentStatus === 'PAID' && (
                     <div className="w-full py-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold text-center border border-emerald-500/20">PAYMENT SECURED</div>
@@ -369,6 +512,55 @@ const CaptainDashboard = () => {
               </div>
             ))}
             {myBookings.length === 0 && <p className="text-slate-500 text-center py-12">No squad bookings found.</p>}
+          </div>
+        )}
+
+        {/* ═══ TAB: My Wallet ═══ */}
+        {activeTab === 'wallet' && (
+          <div className="animate-fade-in-up">
+            <div className="glass rounded-2xl overflow-hidden border border-amber-500/10">
+              <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Transaction History</h2>
+                  <p className="text-sm text-slate-400">All your top-ups and payments</p>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-300">
+                  <thead className="bg-white/5 text-slate-400 text-xs uppercase font-semibold">
+                    <tr>
+                      <th className="px-6 py-4">Date</th>
+                      <th className="px-6 py-4">Description</th>
+                      <th className="px-6 py-4">Type</th>
+                      <th className="px-6 py-4 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {(wallet.transactions || []).map(t => (
+                      <tr key={t.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">{t.date?.substring(0, 10)}</td>
+                        <td className="px-6 py-4">{t.description}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${
+                            t.type === 'TOP_UP' ? 'bg-emerald-500/10 text-emerald-400' :
+                            t.type === 'REFUND' ? 'bg-amber-500/10 text-amber-400' :
+                            'bg-rose-500/10 text-rose-400'
+                          }`}>
+                            {t.type}
+                          </span>
+                        </td>
+                        <td className={`px-6 py-4 text-right font-bold ${['TOP_UP', 'REFUND'].includes(t.type) ? 'text-emerald-400' : 'text-white'}`}>
+                          {['TOP_UP', 'REFUND'].includes(t.type) ? '+' : '-'} Rs. {t.amount}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(!wallet.transactions || wallet.transactions.length === 0) && (
+                  <p className="text-slate-500 text-center py-12">No transactions found.</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

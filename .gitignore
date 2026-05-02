@@ -109,7 +109,7 @@ ehthumbs_vista.db
 *.lnk
 
 # ==========================================
-# Logs and Databases
+# Logs, Databases, and Uploads
 # ==========================================
 *.log
 *.sqlite
@@ -117,6 +117,7 @@ ehthumbs_vista.db
 *.db
 /backend/logs/
 /backend/tomcat/logs/
+/uploads/
 
 # ==========================================
 # Miscellaneous
