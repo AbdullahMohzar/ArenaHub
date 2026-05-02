@@ -1,6 +1,7 @@
 package com.arenahub.controllers;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,16 +9,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.File;
 import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
-import javax.servlet.http.Part;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 
 import com.arenahub.utils.DatabaseConnection;
 import com.google.gson.Gson;
@@ -97,11 +97,12 @@ public class TurfServlet extends HttpServlet {
             try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
                 for (int i = 0; i < params.size(); i++) {
                     Object p = params.get(i);
-                    switch (p) {
-                        case String s -> stmt.setString(i + 1, s);
-                        case Double d -> stmt.setDouble(i + 1, d);
-                        case Integer num -> stmt.setInt(i + 1, num);
-                        case null, default -> {}
+                    if (p instanceof String) {
+                        stmt.setString(i + 1, (String) p);
+                    } else if (p instanceof Double) {
+                        stmt.setDouble(i + 1, (Double) p);
+                    } else if (p instanceof Integer) {
+                        stmt.setInt(i + 1, (Integer) p);
                     }
                 }
 
@@ -172,20 +173,25 @@ public class TurfServlet extends HttpServlet {
 
         try {
             int ownerId = 0;
-            String name = "";
-            String sportType = "Football";
+            String name;
+            String sportType;
             double price = 0.0;
-            String location = "";
-            String description = "";
+            String location;
+            String description;
             String primaryImageUrl = null;
             List<String> galleryUrls = new ArrayList<>();
 
             // Handle Multipart
             if (req.getContentType() != null && req.getContentType().toLowerCase().startsWith("multipart/form-data")) {
-                ownerId = Integer.parseInt(req.getParameter("ownerId"));
+                String ownerIdStr = req.getParameter("ownerId");
+                if (ownerIdStr != null) ownerId = Integer.parseInt(ownerIdStr);
+                
                 name = req.getParameter("name");
                 sportType = req.getParameter("sportType");
-                price = Double.parseDouble(req.getParameter("pricePerHour"));
+                
+                String priceStr = req.getParameter("pricePerHour");
+                if (priceStr != null) price = Double.parseDouble(priceStr);
+                
                 location = req.getParameter("location") != null ? req.getParameter("location") : "";
                 description = req.getParameter("description") != null ? req.getParameter("description") : "";
                 
@@ -206,22 +212,33 @@ public class TurfServlet extends HttpServlet {
                 }
                 
                 // Fallback: also check for single 'image' part (backward compat)
-                if (galleryUrls.isEmpty()) {
-                    Part filePart = req.getPart("image");
-                    if (filePart != null && filePart.getSize() > 0) {
-                        String fileName = UUID.randomUUID().toString() + "_" + getFileName(filePart);
-                        filePart.write(uploadPath + File.separator + fileName);
-                        primaryImageUrl = "/uploads/turfs/" + fileName;
-                        galleryUrls.add(primaryImageUrl);
+                Part singleImagePart = req.getPart("image");
+                if (singleImagePart != null && singleImagePart.getSize() > 0 && singleImagePart.getContentType() != null && singleImagePart.getContentType().startsWith("image/")) {
+                    String fileName = UUID.randomUUID().toString() + "_" + getFileName(singleImagePart);
+                    singleImagePart.write(uploadPath + File.separator + fileName);
+                    String url = "/uploads/turfs/" + fileName;
+                    galleryUrls.add(url);
+                    if (primaryImageUrl == null) primaryImageUrl = url;
+                }
+                
+                // Check if this is an update or create
+                String action = req.getParameter("action");
+                if ("FULL_UPDATE".equals(action)) {
+                    int turfId = Integer.parseInt(req.getParameter("turfId"));
+                    try (Connection conn = DatabaseConnection.getConnection()) {
+                        handleFullUpdate(conn, turfId, name, sportType, price, location, description, galleryUrls);
+                        resp.setStatus(HttpServletResponse.SC_OK);
+                        resp.getWriter().write("{\"message\":\"Venue updated successfully!\"}");
+                        return;
                     }
                 }
             } else {
                 BufferedReader reader = req.getReader();
                 JsonObject json = new Gson().fromJson(reader, JsonObject.class);
-                ownerId = json.get("ownerId").getAsInt();
-                name = json.get("name").getAsString();
-                sportType = json.get("sportType").getAsString();
-                price = json.get("pricePerHour").getAsDouble();
+                if (json.has("ownerId")) ownerId = json.get("ownerId").getAsInt();
+                name = json.has("name") ? json.get("name").getAsString() : "";
+                sportType = json.has("sportType") ? json.get("sportType").getAsString() : "Football";
+                if (json.has("pricePerHour")) price = json.get("pricePerHour").getAsDouble();
                 location = json.has("location") ? json.get("location").getAsString() : "";
                 description = json.has("description") ? json.get("description").getAsString() : "";
             }
@@ -267,6 +284,32 @@ public class TurfServlet extends HttpServlet {
         }
     }
 
+    // Helper method for updating turf (shared between POST and PUT)
+    private void handleFullUpdate(Connection conn, int turfId, String name, String sportType, double price, String location, String description, List<String> galleryUrls) throws SQLException {
+        String sql = "UPDATE Turfs SET Name = ?, SportType = ?, PricePerHour = ?, Location = ?, Description = ? WHERE TurfID = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            stmt.setString(2, sportType);
+            stmt.setDouble(3, price);
+            stmt.setString(4, location);
+            stmt.setString(5, description);
+            stmt.setInt(6, turfId);
+            stmt.executeUpdate();
+        }
+
+        if (galleryUrls != null && !galleryUrls.isEmpty()) {
+            String imgSql = "INSERT INTO TurfImages (TurfID, ImageURL) VALUES (?, ?)";
+            try (PreparedStatement imgStmt = conn.prepareStatement(imgSql)) {
+                for (String url : galleryUrls) {
+                    imgStmt.setInt(1, turfId);
+                    imgStmt.setString(2, url);
+                    imgStmt.addBatch();
+                }
+                imgStmt.executeBatch();
+            }
+        }
+    }
+
     // PUT /api/turfs — Update Pricing (UC-03) & Maintenance (UC-10)
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -282,34 +325,50 @@ public class TurfServlet extends HttpServlet {
             String action = json.get("action").getAsString();
 
             try (Connection conn = DatabaseConnection.getConnection()) {
-                if ("PRICING".equals(action)) {
-                    double multiplier = json.get("weekendPriceMultiplier").getAsDouble();
-                    String sql = "UPDATE Turfs SET WeekendPriceMultiplier = ? WHERE TurfID = ?";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        stmt.setDouble(1, multiplier);
-                        stmt.setInt(2, turfId);
-                        stmt.executeUpdate();
+                switch (action) {
+                    case "PRICING": {
+                        double multiplier = json.get("weekendPriceMultiplier").getAsDouble();
+                        String sql = "UPDATE Turfs SET WeekendPriceMultiplier = ? WHERE TurfID = ?";
+                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                            stmt.setDouble(1, multiplier);
+                            stmt.setInt(2, turfId);
+                            stmt.executeUpdate();
+                        }
+                        break;
                     }
-                } else if ("MAINTENANCE".equals(action)) {
-                    String start = json.has("start") ? json.get("start").getAsString() : null;
-                    String end = json.has("end") ? json.get("end").getAsString() : null;
-                    String sql = "UPDATE Turfs SET MaintenanceLockStart = ?, MaintenanceLockEnd = ?, Status = ? WHERE TurfID = ?";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        stmt.setString(1, start);
-                        stmt.setString(2, end);
-                        stmt.setString(3, (start != null && end != null) ? "MAINTENANCE" : "AVAILABLE");
-                        stmt.setInt(4, turfId);
-                        stmt.executeUpdate();
+                    case "FULL_UPDATE": {
+                        String name = json.get("name").getAsString();
+                        String sportType = json.get("sportType").getAsString();
+                        double price = json.get("pricePerHour").getAsDouble();
+                        String location = json.get("location").getAsString();
+                        String description = json.get("description").getAsString();
+                        handleFullUpdate(conn, turfId, name, sportType, price, location, description, null);
+                        break;
                     }
-                } else if ("EDIT".equals(action)) {
-                    String name = json.get("name").getAsString();
-                    String sportType = json.get("sportType").getAsString();
-                    String sql = "UPDATE Turfs SET Name = ?, SportType = ? WHERE TurfID = ?";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                        stmt.setString(1, name);
-                        stmt.setString(2, sportType);
-                        stmt.setInt(3, turfId);
-                        stmt.executeUpdate();
+                    case "MAINTENANCE": {
+                        String start = (json.has("start") && !json.get("start").isJsonNull()) ? json.get("start").getAsString() : null;
+                        String end = (json.has("end") && !json.get("end").isJsonNull()) ? json.get("end").getAsString() : null;
+                        String sqlMaint = "UPDATE Turfs SET MaintenanceLockStart = ?, MaintenanceLockEnd = ?, Status = ? WHERE TurfID = ?";
+                        try (PreparedStatement stmt = conn.prepareStatement(sqlMaint)) {
+                            stmt.setString(1, start);
+                            stmt.setString(2, end);
+                            stmt.setString(3, (start != null && end != null) ? "MAINTENANCE" : "AVAILABLE");
+                            stmt.setInt(4, turfId);
+                            stmt.executeUpdate();
+                        }
+                        break;
+                    }
+                    case "EDIT": {
+                        String editName = json.get("name").getAsString();
+                        String editSportType = json.get("sportType").getAsString();
+                        String sqlEdit = "UPDATE Turfs SET Name = ?, SportType = ? WHERE TurfID = ?";
+                        try (PreparedStatement stmt = conn.prepareStatement(sqlEdit)) {
+                            stmt.setString(1, editName);
+                            stmt.setString(2, editSportType);
+                            stmt.setInt(3, turfId);
+                            stmt.executeUpdate();
+                        }
+                        break;
                     }
                 }
 
@@ -317,6 +376,48 @@ public class TurfServlet extends HttpServlet {
                 resp.getWriter().write("{\"message\":\"Venue updated successfully!\"}");
             }
         } catch (SQLException e) {
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
+        }
+    }
+
+    // DELETE /api/turfs?turfId=123
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        setAccessControlHeaders(resp);
+        resp.setContentType("application/json");
+        
+        String turfIdStr = req.getParameter("turfId");
+        if (turfIdStr == null) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.getWriter().write("{\"error\":\"Missing turfId\"}");
+            return;
+        }
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            int turfId = Integer.parseInt(turfIdStr);
+            
+            // 1. Delete associated images
+            String delImgs = "DELETE FROM TurfImages WHERE TurfID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(delImgs)) {
+                stmt.setInt(1, turfId);
+                stmt.executeUpdate();
+            }
+
+            // 2. Delete turf
+            String delTurf = "DELETE FROM Turfs WHERE TurfID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(delTurf)) {
+                stmt.setInt(1, turfId);
+                int deleted = stmt.executeUpdate();
+                if (deleted > 0) {
+                    resp.setStatus(HttpServletResponse.SC_OK);
+                    resp.getWriter().write("{\"message\":\"Venue deleted successfully\"}");
+                } else {
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    resp.getWriter().write("{\"error\":\"Venue not found\"}");
+                }
+            }
+        } catch (SQLException | NumberFormatException e) {
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             resp.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
         }

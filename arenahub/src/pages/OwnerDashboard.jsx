@@ -26,7 +26,7 @@ const OwnerDashboard = () => {
   
   // Edit Venue
   const [editingTurfId, setEditingTurfId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', sportType: 'Football' });
+  const [editForm, setEditForm] = useState({ name: '', sportType: 'Football', pricePerHour: '', location: '', description: '', imageFiles: [] });
 
   // Chat Inbox replaced by global ChatSidebar
   const openChatSidebar = (contactUserId, contactName, contactRole) => {
@@ -44,7 +44,7 @@ const OwnerDashboard = () => {
 
   const fetchTurfs = async () => {
     try {
-      const res = await fetch(`${API}/api/turfs?ownerId=${userId}`);
+      const res = await fetch(`${API}/api/turfs?ownerId=${userId}`, { headers });
       if (res.ok) setMyTurfs(await res.json());
     } catch (err) { console.error(err); }
   };
@@ -154,19 +154,7 @@ const OwnerDashboard = () => {
     }
   };
 
-  const submitEditVenue = async (turfId) => {
-    try {
-      const res = await fetch(`${API}/api/turfs`, {
-        method: 'PUT', headers,
-        body: JSON.stringify({ turfId, action: 'EDIT', name: editForm.name, sportType: editForm.sportType })
-      });
-      if (res.ok) {
-        setEditingTurfId(null);
-        fetchTurfs();
-        setToasts(p => [...p, { id: Date.now(), msg: `Venue updated successfully!` }]);
-      }
-    } catch (err) { console.error(err); }
-  };
+
 
   // UC-03: Toggle Surge Pricing
   const toggleSurgePricing = async (turfId, currentMultiplier) => {
@@ -212,40 +200,119 @@ const OwnerDashboard = () => {
       if (res.ok) fetchTurfs();
     } catch (err) { console.error(err); }
   };
+  const deleteTurf = async (turfId) => {
+    if (!window.confirm("Are you sure you want to delete this venue? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`${API}/api/turfs?turfId=${turfId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchTurfs();
+        setToasts(p => [...p, { id: Date.now(), msg: `Venue deleted successfully.` }]);
+      } else {
+        const data = await res.json();
+        alert(data.error);
+      }
+    } catch (err) { console.error(err); }
+  };
+  const startEdit = (turf) => {
+    setEditingTurfId(turf.TurfID);
+    setEditForm({
+      name: turf.Name,
+      sportType: turf.SportType || 'Football',
+      pricePerHour: turf.PricePerHour || '',
+      location: turf.Location || '',
+      description: turf.Description || '',
+      imageFiles: []
+    });
+  };
+
+  const saveEdit = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      let res;
+      // If there are new images, we use FormData and POST with action=UPDATE
+      if (editForm.imageFiles && editForm.imageFiles.length > 0) {
+        const formData = new FormData();
+        formData.append('action', 'FULL_UPDATE');
+        formData.append('turfId', editingTurfId);
+        formData.append('name', editForm.name);
+        formData.append('sportType', editForm.sportType);
+        formData.append('pricePerHour', editForm.pricePerHour);
+        formData.append('location', editForm.location);
+        formData.append('description', editForm.description);
+        
+        for (let i = 0; i < editForm.imageFiles.length; i++) {
+          formData.append('images', editForm.imageFiles[i]);
+        }
+
+        res = await fetch(`${API}/api/turfs`, {
+          method: 'POST', // Use POST for multipart updates
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+      } else {
+        // Textual update via PUT
+        res = await fetch(`${API}/api/turfs`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ 
+            action: 'FULL_UPDATE',
+            turfId: editingTurfId,
+            name: editForm.name,
+            sportType: editForm.sportType,
+            pricePerHour: editForm.pricePerHour,
+            location: editForm.location,
+            description: editForm.description
+          })
+        });
+      }
+
+      if (res.ok) {
+        setEditingTurfId(null);
+        fetchTurfs();
+        setToasts(p => [...p, { id: Date.now(), msg: `Venue updated successfully!` }]);
+      } else {
+        const data = await res.json();
+        alert(data.error);
+      }
+    } catch (err) { 
+      console.error(err);
+      alert('Error updating venue details.');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-arena-950">
+    <div className="min-h-screen bg-zinc-950">
       {/* Toast Overlay */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map(t => (
-          <div key={t.id} className="glass rounded-lg p-4 border border-emerald-500/50 shadow-lg shadow-emerald-500/20 text-white animate-fade-in-up flex items-center gap-3">
+          <div key={t.id} className="brutal-card p-4 border-accent/50 shadow-lg shadow-accent/10 text-white animate-fade-in-up flex items-center gap-3">
             <span className="text-xl">🛎️</span> {t.msg}
           </div>
         ))}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex justify-between items-end mb-12">
           <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              Owner Dashboard
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-glow" /> Live
-              </span>
+            <h1 className="text-6xl font-black text-white uppercase tracking-tighter leading-none">
+              Control <span className="text-accent">Center</span>
             </h1>
-            <p className="text-slate-400 mt-1">Manage venues, pricing, and monitor real-time bookings.</p>
+            <p className="text-slate-400 mt-4 max-w-md font-medium">Manage your properties, real-time booking schedules, and dynamic pricing rules from one kinetic dashboard.</p>
           </div>
-          <div className="glass rounded-2xl px-6 py-4 flex flex-col min-w-[200px]">
-            <span className="text-xs text-slate-400 uppercase tracking-wider mb-1">Monthly Revenue</span>
-            <span className="text-2xl font-bold text-emerald-400">Rs. {monthlyRevenue.toLocaleString('en-IN')}</span>
+          <div className="brutal-card p-6 min-w-[240px]">
+            <span className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 block">Monthly Revenue</span>
+            <span className="text-4xl font-black text-accent tracking-tighter">Rs. {monthlyRevenue.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
-          <button onClick={() => setActiveTab('venues')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'venues' ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}>🏢 Venue Manager</button>
-          <button onClick={() => setActiveTab('calendar')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'calendar' ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}>📅 Visual Calendar</button>
-          <button onClick={() => setActiveTab('pricing')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'pricing' ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}>💲 Pricing Rules</button>
+        <div className="flex gap-4 mb-12">
+          <button onClick={() => setActiveTab('venues')} className={`px-8 py-3 font-black uppercase tracking-tighter text-sm transition-all border-2 ${activeTab === 'venues' ? 'bg-accent text-black border-accent' : 'text-white border-white/10 hover:border-accent hover:text-accent'}`}>🏢 Venue Manager</button>
+          <button onClick={() => setActiveTab('calendar')} className={`px-8 py-3 font-black uppercase tracking-tighter text-sm transition-all border-2 ${activeTab === 'calendar' ? 'bg-accent text-black border-accent' : 'text-white border-white/10 hover:border-accent hover:text-accent'}`}>📅 Visual Calendar</button>
+          <button onClick={() => setActiveTab('pricing')} className={`px-8 py-3 font-black uppercase tracking-tighter text-sm transition-all border-2 ${activeTab === 'pricing' ? 'bg-accent text-black border-accent' : 'text-white border-white/10 hover:border-accent hover:text-accent'}`}>💲 Pricing Rules</button>
         </div>
 
 
@@ -291,9 +358,9 @@ const OwnerDashboard = () => {
               </form>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {myTurfs.map(t => (
-                <div key={t.TurfID} className="glass rounded-2xl overflow-hidden">
+                <div key={t.TurfID} className="brutal-card group overflow-hidden">
                   {/* Image Header */}
                   <div className="h-48 bg-slate-800 relative">
                     {t.ImageURL ? (
@@ -311,65 +378,58 @@ const OwnerDashboard = () => {
 
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
-                      {editingTurfId === t.TurfID ? (
-                      <div className="flex flex-col gap-2">
-                        <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="px-3 py-1 bg-arena-950 border border-white/10 rounded text-sm text-white" />
-                        <select value={editForm.sportType} onChange={e => setEditForm({...editForm, sportType: e.target.value})} className="px-3 py-1 bg-arena-950 border border-white/10 rounded text-sm text-white">
-                          <option value="Football">Football</option>
-                          <option value="Cricket">Cricket</option>
-                          <option value="Tennis">Tennis</option>
-                        </select>
-                        <div className="flex gap-2">
-                            <button onClick={() => submitEditVenue(t.TurfID)} className="px-3 py-1 bg-indigo-500 text-white rounded text-sm">Save</button>
-                            <button onClick={() => setEditingTurfId(null)} className="px-3 py-1 bg-slate-700 text-white rounded text-sm">Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
                       <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-xl font-bold text-white">{t.Name}</h3>
-                          <button onClick={() => { setEditingTurfId(t.TurfID); setEditForm({ name: t.Name, sportType: t.SportType }); }} className="text-xs text-indigo-400 hover:text-indigo-300">Edit</button>
-                        </div>
+                        <h3 className="text-xl font-bold text-white">{t.Name}</h3>
                         <p className="text-sm text-slate-400">{t.Location || 'No location set'} • {t.SportType}</p>
                       </div>
-                    )}
-                    <div className="text-right ml-4">
-                      <p className="text-xl font-bold text-emerald-400">Rs. {t.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-emerald-400">Rs. {t.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-4 pt-4 border-t border-white/10">
-                    {/* Maintenance Lock */}
-                    <div className="p-3 rounded-xl bg-white/5">
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <p className="text-sm font-semibold text-white">Maintenance Lock</p>
-                          <p className="text-xs text-slate-400">Prevent bookings during specific dates</p>
+                    <div className="flex gap-2 mb-6">
+                      <button onClick={() => startEdit(t)} className="flex-1 py-2 rounded bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/30 hover:bg-amber-500/20 transition-all">Edit Info</button>
+                      <button onClick={() => deleteTurf(t.TurfID)} className="flex-1 py-2 rounded bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/30 hover:bg-rose-500/20 transition-all">Delete</button>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-white/10">
+                      {/* Maintenance Lock */}
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                        <div className="flex justify-between items-center mb-2">
+                          <div>
+                            <p className="text-sm font-semibold text-white">Maintenance Lock</p>
+                            <p className="text-xs text-slate-400">Prevent bookings during specific dates</p>
+                          </div>
+                          {t.Status === 'MAINTENANCE' && (
+                            <button onClick={() => clearMaintenance(t.TurfID)} className="text-xs text-rose-400 hover:text-rose-300 font-bold uppercase tracking-tighter">Clear Lock</button>
+                          )}
                         </div>
-                        {t.Status === 'MAINTENANCE' && (
-                          <button onClick={() => clearMaintenance(t.TurfID)} className="text-xs text-rose-400 hover:text-rose-300">Clear Lock</button>
+                        {t.Status === 'MAINTENANCE' ? (
+                          <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-xs font-bold">
+                            Locked: {t.MaintenanceLockStart} to {t.MaintenanceLockEnd}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input type="date" className="flex-1 px-2 py-1.5 bg-arena-950 border border-white/10 rounded text-slate-300 text-[10px]" 
+                              onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, start: e.target.value})} />
+                            <input type="date" className="flex-1 px-2 py-1.5 bg-arena-950 border border-white/10 rounded text-slate-300 text-[10px]" 
+                              onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, end: e.target.value})} />
+                            <button onClick={() => submitMaintenance(t.TurfID)} disabled={!maintenanceForm.start || !maintenanceForm.end || maintenanceForm.turfId !== t.TurfID}
+                              className="px-3 py-1.5 bg-zinc-800 text-white rounded text-[10px] font-bold uppercase disabled:opacity-50 hover:bg-zinc-700">Lock</button>
+                          </div>
                         )}
                       </div>
-                      {t.Status === 'MAINTENANCE' ? (
-                        <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 text-sm">
-                          Locked from: {t.MaintenanceLockStart} to {t.MaintenanceLockEnd}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <input type="date" className="flex-1 px-3 py-1.5 bg-arena-950 border border-white/10 rounded text-slate-300 text-sm" 
-                            onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, start: e.target.value})} />
-                          <span className="text-slate-500 text-xs">to</span>
-                          <input type="date" className="flex-1 px-3 py-1.5 bg-arena-950 border border-white/10 rounded text-slate-300 text-sm" 
-                            onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, end: e.target.value})} />
-                          <button onClick={() => submitMaintenance(t.TurfID)} disabled={!maintenanceForm.start || !maintenanceForm.end || maintenanceForm.turfId !== t.TurfID}
-                            className="px-3 py-1.5 bg-slate-700 text-white rounded text-sm disabled:opacity-50 hover:bg-slate-600">Lock</button>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
-              </div>
               ))}
+              {myTurfs.length === 0 && (
+                <div className="col-span-full py-20 brutal-card flex flex-col items-center justify-center">
+                  <span className="text-6xl mb-4 opacity-50">🏟️</span>
+                  <p className="text-xl font-bold text-slate-500 uppercase tracking-tighter">No venues listed yet</p>
+                  <button onClick={() => setShowVenueForm(true)} className="mt-4 brutal-btn px-6 py-2">+ List Your First Property</button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -458,6 +518,71 @@ const OwnerDashboard = () => {
           </div>
         )}
 
+
+        {/* ═══ Edit Venue Modal ═══ */}
+        {editingTurfId && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="glass rounded-3xl p-8 w-full max-w-2xl animate-fade-in-up border border-white/10">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-white">Edit Venue Details</h3>
+                <button onClick={() => setEditingTurfId(null)} className="text-slate-400 hover:text-white transition-all">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <form onSubmit={saveEdit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Venue Name</label>
+                    <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-indigo-500 outline-none" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Sport Type</label>
+                    <select value={editForm.sportType} onChange={e => setEditForm({...editForm, sportType: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-indigo-500 outline-none">
+                      <option value="Football">Football</option>
+                      <option value="Cricket">Cricket</option>
+                      <option value="Basketball">Basketball</option>
+                      <option value="Tennis">Tennis</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Price per Hour (Rs.)</label>
+                    <input type="number" value={editForm.pricePerHour} onChange={e => setEditForm({...editForm, pricePerHour: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-indigo-500 outline-none" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Location</label>
+                    <input type="text" value={editForm.location} onChange={e => setEditForm({...editForm, location: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-indigo-500 outline-none" required />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Description</label>
+                  <textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})}
+                    rows={3} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-indigo-500 outline-none" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Add More Photos (Optional)</label>
+                  <input type="file" multiple onChange={e => setEditForm({...editForm, imageFiles: Array.from(e.target.files)})}
+                    className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-500/10 file:text-indigo-400 hover:file:bg-indigo-500/20" />
+                  <p className="text-[10px] text-slate-500 mt-1">* New photos will be added to the gallery. Existing photos are preserved.</p>
+                </div>
+
+                <div className="flex gap-3 mt-8">
+                  <button type="button" onClick={() => setEditingTurfId(null)} 
+                    className="flex-1 py-3 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all">Cancel</button>
+                  <button type="submit" 
+                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all">
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

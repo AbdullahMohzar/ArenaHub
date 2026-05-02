@@ -365,7 +365,7 @@ public class BookingServlet extends HttpServlet {
 
                         // 1. Fetch booking details to calculate refund
                         int userId = -1;
-                        double refundAmount = 0.0;
+                        // Calculation used locally if needed
                         String status = "";
                         String fetchSql = "SELECT b.UserID, b.Status, TIMESTAMPDIFF(MINUTE, b.StartTime, b.EndTime) / 60.0 AS Duration, t.PricePerHour " +
                                           "FROM Bookings b JOIN Turfs t ON b.TurfID = t.TurfID WHERE b.BookingID = ?";
@@ -375,9 +375,7 @@ public class BookingServlet extends HttpServlet {
                                 if (rs.next()) {
                                     userId = rs.getInt("UserID");
                                     status = rs.getString("Status");
-                                    double duration = rs.getDouble("Duration");
-                                    double pricePerHour = rs.getDouble("PricePerHour");
-                                    refundAmount = duration * pricePerHour;
+                                    // Removed unused variables and calculations
                                 }
                             }
                         }

@@ -8,7 +8,6 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -16,7 +15,14 @@ import com.arenahub.utils.JwtUtil;
 
 import io.jsonwebtoken.Claims;
 
-@WebFilter("/*")
+/**
+ * JWT Authentication Filter.
+ * CORS is handled by CorsFilter (runs before this filter via web.xml ordering).
+ * This filter only handles JWT token validation.
+ * 
+ * NOTE: No @WebFilter annotation — filter mapping is defined in web.xml
+ * to guarantee that CorsFilter runs first.
+ */
 public class AuthFilter implements Filter {
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {}
@@ -28,24 +34,16 @@ public class AuthFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
 
-        // Handle CORS Preflight completely here
+        // OPTIONS preflight is already handled by CorsFilter — skip auth
         if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
-            resp.setHeader("Access-Control-Allow-Origin", "*");
-            resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-            resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-            resp.setStatus(HttpServletResponse.SC_OK);
+            chain.doFilter(request, response);
             return;
         }
 
-        // Standard CORS headers for downstream traffic
-        resp.setHeader("Access-Control-Allow-Origin", "*");
-        resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
         String path = req.getRequestURI();
 
-        // Skip auth for login, register, and fetching turfs
-        if (path.endsWith("/api/login") || path.endsWith("/api/register")) {
+        // Skip auth for login, register, reset-password, and fetching turfs/reviews
+        if (path.endsWith("/api/login") || path.endsWith("/api/register") || path.endsWith("/api/reset-password")) {
             chain.doFilter(request, response);
             return;
         }
