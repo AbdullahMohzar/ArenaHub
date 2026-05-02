@@ -323,7 +323,7 @@ const CaptainDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {turfs.map(turf => (
-                <div key={turf.TurfID} onClick={() => setSelectedTurf(turf)} className={`glass rounded-2xl overflow-hidden transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'hover:border-white/20'} cursor-pointer`}>
+                <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'hover:border-white/20'}`}>
                   {/* Image Header */}
                   <div className="h-48 bg-slate-800 relative">
                     {turf.ImageURL ? (
@@ -343,8 +343,11 @@ const CaptainDashboard = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-bold text-amber-400">Rs. {turf.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
-                        <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold border border-indigo-500/30 hover:bg-indigo-500/30 transition-all">
+                        <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold border border-indigo-500/30 hover:bg-indigo-500/30 transition-all">
                           💬 Contact Owner
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedTurf(turf); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold border border-emerald-500/30 hover:bg-emerald-500/30 transition-all">
+                          🖼️ View Details
                         </button>
                       </div>
                     </div>

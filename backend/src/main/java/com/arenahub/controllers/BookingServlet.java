@@ -383,28 +383,10 @@ public class BookingServlet extends HttpServlet {
                         }
 
                         if (userId != -1 && !"CANCELLED".equals(status)) {
-                            // 2. Update booking status
+                            // 2. Update booking status (Admin will process the refund later)
                             String cancelSql = "UPDATE Bookings SET Status = 'CANCELLED' WHERE BookingID = ?";
                             try (PreparedStatement stmt = conn.prepareStatement(cancelSql)) {
                                 stmt.setInt(1, bookingId);
-                                stmt.executeUpdate();
-                            }
-
-                            // 3. Process Refund
-                            String walletSql = "UPDATE Wallets SET Balance = Balance + ? WHERE UserID = ?";
-                            try (PreparedStatement stmt = conn.prepareStatement(walletSql)) {
-                                stmt.setDouble(1, refundAmount);
-                                stmt.setInt(2, userId);
-                                stmt.executeUpdate();
-                            }
-
-                            // 4. Log Wallet Transaction
-                            String logSql = "INSERT INTO WalletTransactions (WalletID, TransactionType, Amount, Description) " +
-                                            "SELECT WalletID, 'REFUND', ?, ? FROM Wallets WHERE UserID = ?";
-                            try (PreparedStatement stmt = conn.prepareStatement(logSql)) {
-                                stmt.setDouble(1, refundAmount);
-                                stmt.setString(2, "Refund for cancelled booking #" + bookingId);
-                                stmt.setInt(3, userId);
                                 stmt.executeUpdate();
                             }
 

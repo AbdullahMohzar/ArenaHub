@@ -6,7 +6,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
 import ProtectedRoute from './components/ProtectedRoute';
-
+import Layout from './components/Layout';
 // Dashboards
 import PlayerDashboard from './pages/PlayerDashboard';
 import CaptainDashboard from './pages/CaptainDashboard';
@@ -31,9 +31,7 @@ const DynamicDashboard = () => {
 function App() {
   return (
     <Router>
-      <Navbar />
-      <ChatSidebar />
-      <main className="pt-16">
+      <Layout>
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
@@ -59,7 +57,7 @@ function App() {
           <Route path="/admin/users" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
           <Route path="/admin/disputes" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
         </Routes>
-      </main>
+      </Layout>
     </Router>
   );
 }

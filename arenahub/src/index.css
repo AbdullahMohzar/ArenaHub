@@ -1,41 +1,60 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   ArenaHub — Global Design Tokens (Tailwind v4)
+   ArenaHub — Kinetic Brutalism Design Tokens
    ═══════════════════════════════════════════════════ */
 
 @theme {
-  --color-arena-950: #0a0e1a;
-  --color-arena-900: #0f1629;
-  --color-arena-800: #151d38;
-  --color-arena-700: #1c264a;
-  --color-arena-600: #253262;
-  --color-arena-500: #334880;
+  --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  
+  --color-accent: var(--role-color);
+  --color-accent-light: var(--role-color-light);
+  --color-accent-dark: var(--role-color-dark);
+  
+  --color-zinc-950: #09090b;
+  --color-zinc-900: #18181b;
+  --color-zinc-800: #27272a;
+}
 
-  --color-emerald-400: #34d399;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
+:root {
+  /* Default to Player/Emerald if no role */
+  --role-color: #10b981;
+  --role-color-light: #34d399;
+  --role-color-dark: #059669;
+}
 
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
+[data-role="Player"] {
+  --role-color: #10b981;
+  --role-color-light: #34d399;
+  --role-color-dark: #059669;
+}
 
-  --color-rose-400: #fb7185;
-  --color-rose-500: #f43f5e;
+[data-role="Captain"] {
+  --role-color: #f59e0b;
+  --role-color-light: #fbbf24;
+  --role-color-dark: #d97706;
+}
 
-  --color-cyan-400: #22d3ee;
-  --color-cyan-500: #06b6d4;
+[data-role="Owner"] {
+  --role-color: #6366f1;
+  --role-color-light: #818cf8;
+  --role-color-dark: #4f46e5;
+}
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+[data-role="Admin"] {
+  --role-color: #f43f5e;
+  --role-color-light: #fb7185;
+  --role-color-dark: #e11d48;
 }
 
 /* ═══════════════════════════════════════════════════
-   Base Styles
+   Base Styles & Noise Overlay
    ═══════════════════════════════════════════════════ */
 
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background-color: var(--color-arena-950);
+  background-color: var(--color-zinc-950);
   color: #e2e8f0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -45,69 +64,96 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Aggressive Noise Texture Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
 }
 
 /* ═══════════════════════════════════════════════════
-   Glassmorphism Utility
+   Brutalist Primitives
    ═══════════════════════════════════════════════════ */
 
-.glass {
-  background: rgba(15, 22, 41, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Remove glassmorphism entirely, use solid borders and colors */
+.brutal-card {
+  background-color: var(--color-zinc-900);
+  border: 2px solid var(--color-zinc-800);
+  border-radius: 0; /* Sharp 0px corners */
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.glass-light {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+.brutal-card:hover {
+  background-color: var(--role-color);
+  border-color: var(--role-color);
+  color: #000 !important;
 }
 
-/* ═══════════════════════════════════════════════════
-   Custom Scrollbar
-   ═══════════════════════════════════════════════════ */
+.brutal-card:hover * {
+  color: #000 !important;
+}
 
+.brutal-btn {
+  background-color: transparent;
+  border: 2px solid var(--role-color);
+  color: var(--role-color);
+  border-radius: 0;
+  font-weight: 800;
+  text-transform: uppercase;
+  transition: all 0.15s ease-out;
+}
+
+.brutal-btn:hover {
+  background-color: var(--role-color);
+  color: #000;
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-zinc-950);
+  border-left: 1px solid var(--color-zinc-900);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--role-color);
+  border-radius: 0;
 }
 
 /* ═══════════════════════════════════════════════════
-   Animations
+   Kinetic Animations
    ═══════════════════════════════════════════════════ */
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes pulse-heartbeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.02); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.02); }
+  70% { transform: scale(1); }
+  100% { transform: scale(1); }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.animate-pulse-heartbeat {
+  animation: pulse-heartbeat 2s infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.6); }
+.clip-unmask {
+  clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0% 100%);
+  animation: unmask 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
+@keyframes unmask {
+  to {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
 }
