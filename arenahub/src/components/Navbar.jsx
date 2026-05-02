@@ -102,20 +102,23 @@ const Navbar = () => {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-arena-950/90 backdrop-blur-xl shadow-lg shadow-black/20 border-b border-white/5'
-          : 'bg-transparent'
+          ? 'bg-[#050a08]/92 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.55)] border-b border-emerald-500/15'
+          : 'bg-transparent border-b border-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
           {/* ── Logo ── */}
-          <Link to={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 transition-shadow">
-              A
-            </div>
-            <span className="text-lg font-bold text-white tracking-tight">
-              Arena<span className="text-emerald-400">Hub</span>
+          <Link to={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2.5 group">
+            <span className="relative">
+              <span className="absolute -inset-0.5 rounded-md bg-gradient-to-r from-emerald-400 to-cyan-400 opacity-60 blur-[6px] group-hover:opacity-90 transition-opacity" aria-hidden />
+              <span className="relative flex w-9 h-9 items-center justify-center rounded-md border-2 border-emerald-400/90 bg-[#0a1210] font-display text-lg text-emerald-400 shadow-inner">
+                A
+              </span>
+            </span>
+            <span className="font-display text-xl text-white tracking-[0.12em]">
+              ARENA<span className="text-emerald-400">HUB</span>
             </span>
           </Link>
 
@@ -127,10 +130,10 @@ const Navbar = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-semibold uppercase tracking-wide transition-all duration-200 border-b-2 ${
                     isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      ? 'text-white bg-white/5 border-emerald-400 shadow-[0_0_24px_-8px_rgba(52,211,153,0.45)]'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'
                   }`}
                 >
                   <span className="text-base">{item.icon}</span>
@@ -146,7 +149,7 @@ const Navbar = () => {
               /* ── Logged-in: Role Badge + Profile Dropdown ── */
               <div className="flex items-center gap-3">
                 {badge && (
-                  <span className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.color}`}>
+                  <span className={`hidden sm:inline-flex items-center px-2.5 py-1 rounded-sm text-[10px] font-display tracking-[0.15em] border-2 uppercase ${badge.color}`}>
                     {badge.label}
                   </span>
                 )}
@@ -223,7 +226,7 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
+                  className="px-4 py-2 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold uppercase tracking-wide hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-[0_0_24px_-4px_rgba(16,185,129,0.65)] border border-emerald-400/30"
                   id="navbar-signup-link"
                 >
                   Sign Up Free
@@ -260,10 +263,10 @@ const Navbar = () => {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold uppercase tracking-wide transition-all border-l-4 ${
                     isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-white/10 text-white border-emerald-400'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'
                   }`}
                 >
                   <span className="text-lg">{item.icon}</span>
@@ -283,7 +286,7 @@ const Navbar = () => {
                 <Link
                   to="/signup"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center px-4 py-3 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold"
+                  className="block w-full text-center px-4 py-3 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold uppercase tracking-wide border border-emerald-400/30 shadow-[0_0_20px_-6px_rgba(16,185,129,0.6)]"
                 >
                   Sign Up Free
                 </Link>

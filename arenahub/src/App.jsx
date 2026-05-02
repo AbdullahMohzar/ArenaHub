@@ -31,22 +31,21 @@ const DynamicDashboard = () => {
 function App() {
   return (
     <Router>
-      <Layout>
-        <Routes>
+      <Routes>
+        <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          
-          <Route 
-            path="/dashboard" 
+
+          <Route
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <DynamicDashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          {/* Navbar routing paths */}
           <Route path="/venues" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
           <Route path="/my-games" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
           <Route path="/wallet" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
@@ -56,8 +55,8 @@ function App() {
           <Route path="/pricing" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
           <Route path="/admin/disputes" element={<ProtectedRoute><DynamicDashboard /></ProtectedRoute>} />
-        </Routes>
-      </Layout>
+        </Route>
+      </Routes>
     </Router>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ChatWidget from '../components/ChatWidget';
 import TurfDetailModal from '../components/TurfDetailModal';
+import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -263,8 +264,9 @@ const CaptainDashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">Captain's Dashboard</h1>
-            <p className="text-slate-400 mt-1">Organize matches, secure recurring slots, and rent squad equipment.</p>
+            <p className="sports-kicker mb-1">Sideline</p>
+            <h1 className="font-display text-4xl sm:text-5xl text-white uppercase tracking-wide">Captain&apos;s desk</h1>
+            <p className="text-slate-400 mt-2 text-sm max-w-lg">Call the plays — lock slots, go public for pickups, stack gear for the squad.</p>
           </div>
           {/* Wallet Card */}
           <div className="glass rounded-2xl px-6 py-4 flex items-center gap-4">
@@ -280,17 +282,17 @@ const CaptainDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
+        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
           <button onClick={() => setActiveTab('book')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'book' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'book' ? 'bg-amber-500/15 text-amber-300 border-amber-400 shadow-[0_0_20px_-8px_rgba(251,191,36,0.45)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
             🛡️ Book & Manage
           </button>
           <button onClick={() => setActiveTab('bookings')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'bookings' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'bookings' ? 'bg-amber-500/15 text-amber-300 border-amber-400 shadow-[0_0_20px_-8px_rgba(251,191,36,0.45)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
             📋 Squad Bookings
           </button>
           <button onClick={() => setActiveTab('wallet')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'wallet' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'wallet' ? 'bg-amber-500/15 text-amber-300 border-amber-400 shadow-[0_0_20px_-8px_rgba(251,191,36,0.45)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
             💰 My Wallet
           </button>
         </div>
@@ -322,24 +324,30 @@ const CaptainDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {turfs.map(turf => (
+              {turfs.map((turf) => {
+                const turfUrls = collectTurfImageUrls(turf, API);
+                return (
                 <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'hover:border-white/20'}`}>
-                  {/* Image Header */}
-                  <div className="h-48 bg-slate-800 relative">
-                    {turf.ImageURL ? (
-                      <img src={`${API}${turf.ImageURL}`} alt={turf.Name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-900 to-arena-950">
-                        <span className="text-4xl mb-2">🏟️</span>
-                        <span className="text-amber-400/50 text-sm font-semibold tracking-widest uppercase">ArenaHub Turf</span>
-                      </div>
+                  <div className="h-48 bg-slate-800 relative isolate">
+                    <VenueImageCarousel urls={turfUrls} alt={turf.Name} emptyVariant="captain" />
+                    {turfUrls.length > 1 && (
+                      <span className="absolute top-3 left-3 z-10 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-black/55 text-white border border-white/10 backdrop-blur-sm">
+                        {turfUrls.length} photos
+                      </span>
                     )}
                   </div>
                   <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-white">{turf.Name}</h3>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-slate-300 mt-1">{turf.SportType}</span>
+                    <div className="flex items-start justify-between mb-4 gap-3">
+                      <div className="flex gap-3 min-w-0">
+                        {turfUrls[0] ? (
+                          <div className="h-14 w-14 rounded-xl overflow-hidden border-2 border-amber-500/45 shrink-0 shadow-md ring-1 ring-white/10 bg-slate-900">
+                            <img src={turfUrls[0]} alt="" className="h-full w-full object-cover" />
+                          </div>
+                        ) : null}
+                        <div className="min-w-0">
+                          <h3 className="text-xl font-bold text-white truncate">{turf.Name}</h3>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-slate-300 mt-1">{turf.SportType}</span>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-bold text-amber-400">Rs. {turf.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
@@ -459,7 +467,8 @@ const CaptainDashboard = () => {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             {/* Turf Detail Modal */}

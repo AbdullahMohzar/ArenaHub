@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Marquee from 'react-fast-marquee';
 import { MagneticButton } from './KineticPrimitive';
 
 const API = 'http://localhost:8080';
 
 export const ReviewMarquee = ({ reviews }) => {
   if (!reviews || reviews.length === 0) return null;
-  
+
+  const strip = reviews.map((r, idx) => (
+    <div key={idx} className="flex items-center gap-4 mx-8 shrink-0">
+      <span className="text-black font-black text-2xl uppercase">&ldquo;{r.ReviewText}&rdquo;</span>
+      <span className="text-black/60 font-bold text-sm">— {r.UserName} ({r.Rating}/5)</span>
+      <span className="text-black/20 text-3xl font-black">/</span>
+    </div>
+  ));
+
   return (
-    <div className="border-t-2 border-zinc-800 bg-[var(--role-color)] mt-8 py-4 relative group">
+    <div className="border-t-2 border-zinc-800 bg-[var(--role-color)] mt-8 py-4 relative group overflow-hidden">
       <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" />
-      <Marquee speed={60} pauseOnHover className="group-hover:speed-100">
-        {reviews.map((r, idx) => (
-          <div key={idx} className="flex items-center gap-4 mx-8">
-            <span className="text-black font-black text-2xl uppercase">"{r.ReviewText}"</span>
-            <span className="text-black/60 font-bold text-sm">— {r.UserName} ({r.Rating}/5)</span>
-            <span className="text-black/20 text-3xl font-black">/</span>
-          </div>
-        ))}
-      </Marquee>
+      <div className="kinetic-marquee-track">
+        <div className="flex w-max">{strip}</div>
+        <div className="flex w-max">{strip}</div>
+      </div>
     </div>
   );
 };

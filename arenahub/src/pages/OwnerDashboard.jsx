@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
 
 const API = 'http://localhost:8080';
 
@@ -7,6 +8,7 @@ const OwnerDashboard = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const userId = localStorage.getItem('userId');
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   const [activeTab, setActiveTab] = useState('venues');
   const location = useLocation();
@@ -27,6 +29,72 @@ const OwnerDashboard = () => {
   // Edit Venue
   const [editingTurfId, setEditingTurfId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', sportType: 'Football', pricePerHour: '', location: '', description: '', imageFiles: [] });
+  const [removingPhotoPath, setRemovingPhotoPath] = useState(null);
+
+  const toStoredImagePath = (url) => {
+    if (!url) return '';
+    const s = String(url).trim();
+    if (s.startsWith(API)) return s.slice(API.length);
+    const idx = s.indexOf('/uploads/');
+    if (idx >= 0) return s.slice(idx);
+    return s.startsWith('/') ? s : `/${s}`;
+  };
+
+  const removeGalleryImage = async (displaySrc) => {
+    const imageUrl = toStoredImagePath(displaySrc);
+    if (!imageUrl || !editingTurfId) return;
+    if (!window.confirm('Remove this photo from the venue gallery?')) return;
+    setRemovingPhotoPath(imageUrl);
+    try {
+      const res = await fetch(`${API}/api/turfs`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ turfId: editingTurfId, action: 'REMOVE_TURF_IMAGE', imageUrl }),
+      });
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_) { /* ignore */ }
+      if (res.ok) {
+        await fetchTurfs();
+        setToasts((p) => [...p, { id: Date.now(), msg: 'Photo removed from gallery.' }]);
+      } else {
+        alert(data.error || 'Could not remove photo.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error while removing photo.');
+    } finally {
+      setRemovingPhotoPath(null);
+    }
+  };
+
+  const editingTurf = editingTurfId != null ? myTurfs.find((x) => x.TurfID === editingTurfId) : null;
+  const existingEditPhotoUrls = useMemo(() => collectTurfImageUrls(editingTurf, API), [editingTurf]);
+
+  const newPhotoPreviewUrls = useMemo(
+    () => editForm.imageFiles.map((f) => URL.createObjectURL(f)),
+    [editForm.imageFiles]
+  );
+
+  useEffect(() => {
+    return () => {
+      newPhotoPreviewUrls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [newPhotoPreviewUrls]);
+
+  const closeEditModal = () => {
+    setRemovingPhotoPath(null);
+    setEditingTurfId(null);
+    setEditForm({
+      name: '',
+      sportType: 'Football',
+      pricePerHour: '',
+      location: '',
+      description: '',
+      imageFiles: [],
+    });
+  };
 
   // Chat Inbox replaced by global ChatSidebar
   const openChatSidebar = (contactUserId, contactName, contactRole) => {
@@ -39,8 +107,6 @@ const OwnerDashboard = () => {
   const [toasts, setToasts] = useState([]);
   const previousBookingIdsRef = useRef(new Set());
   const isFirstFetchRef = useRef(true);
-
-  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   const fetchTurfs = async () => {
     try {
@@ -270,7 +336,7 @@ const OwnerDashboard = () => {
       }
 
       if (res.ok) {
-        setEditingTurfId(null);
+        closeEditModal();
         fetchTurfs();
         setToasts(p => [...p, { id: Date.now(), msg: `Venue updated successfully!` }]);
       } else {
@@ -295,24 +361,25 @@ const OwnerDashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-end mb-12">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-end gap-8 mb-12">
           <div>
-            <h1 className="text-6xl font-black text-white uppercase tracking-tighter leading-none">
-              Control <span className="text-accent">Center</span>
+            <p className="sports-kicker mb-2">Facility ops</p>
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white uppercase leading-[0.95] tracking-wide">
+              Stadium <span className="text-accent">control</span>
             </h1>
-            <p className="text-slate-400 mt-4 max-w-md font-medium">Manage your properties, real-time booking schedules, and dynamic pricing rules from one kinetic dashboard.</p>
+            <p className="text-slate-400 mt-4 max-w-md text-sm leading-relaxed">Your venues, your lights — bookings, locks, and surge pricing from the owner&apos;s box.</p>
           </div>
-          <div className="brutal-card p-6 min-w-[240px]">
-            <span className="text-xs font-black text-slate-500 uppercase tracking-widest mb-2 block">Monthly Revenue</span>
-            <span className="text-4xl font-black text-accent tracking-tighter">Rs. {monthlyRevenue.toLocaleString('en-IN')}</span>
+          <div className="brutal-card p-6 min-w-[240px] border-accent/40">
+            <span className="text-[10px] font-display text-slate-500 uppercase tracking-[0.2em] mb-2 block">This month gate</span>
+            <span className="text-4xl font-display text-accent tracking-wide">Rs. {monthlyRevenue.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-12">
-          <button onClick={() => setActiveTab('venues')} className={`px-8 py-3 font-black uppercase tracking-tighter text-sm transition-all border-2 ${activeTab === 'venues' ? 'bg-accent text-black border-accent' : 'text-white border-white/10 hover:border-accent hover:text-accent'}`}>🏢 Venue Manager</button>
-          <button onClick={() => setActiveTab('calendar')} className={`px-8 py-3 font-black uppercase tracking-tighter text-sm transition-all border-2 ${activeTab === 'calendar' ? 'bg-accent text-black border-accent' : 'text-white border-white/10 hover:border-accent hover:text-accent'}`}>📅 Visual Calendar</button>
-          <button onClick={() => setActiveTab('pricing')} className={`px-8 py-3 font-black uppercase tracking-tighter text-sm transition-all border-2 ${activeTab === 'pricing' ? 'bg-accent text-black border-accent' : 'text-white border-white/10 hover:border-accent hover:text-accent'}`}>💲 Pricing Rules</button>
+        <div className="flex flex-wrap gap-2 mb-12">
+          <button onClick={() => setActiveTab('venues')} className={`px-6 py-3 font-display text-sm uppercase tracking-[0.12em] transition-all border-2 ${activeTab === 'venues' ? 'bg-accent text-black border-accent shadow-[0_0_28px_-6px_var(--role-color)]' : 'text-white border-white/15 hover:border-accent/80 hover:text-accent bg-black/20'}`}>🏢 Venue deck</button>
+          <button onClick={() => setActiveTab('calendar')} className={`px-6 py-3 font-display text-sm uppercase tracking-[0.12em] transition-all border-2 ${activeTab === 'calendar' ? 'bg-accent text-black border-accent shadow-[0_0_28px_-6px_var(--role-color)]' : 'text-white border-white/15 hover:border-accent/80 hover:text-accent bg-black/20'}`}>📅 Schedule board</button>
+          <button onClick={() => setActiveTab('pricing')} className={`px-6 py-3 font-display text-sm uppercase tracking-[0.12em] transition-all border-2 ${activeTab === 'pricing' ? 'bg-accent text-black border-accent shadow-[0_0_28px_-6px_var(--role-color)]' : 'text-white border-white/15 hover:border-accent/80 hover:text-accent bg-black/20'}`}>💲 Ticket pricing</button>
         </div>
 
 
@@ -359,30 +426,37 @@ const OwnerDashboard = () => {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {myTurfs.map(t => (
+              {myTurfs.map((t) => {
+                const turfUrls = collectTurfImageUrls(t, API);
+                return (
                 <div key={t.TurfID} className="brutal-card group overflow-hidden">
-                  {/* Image Header */}
-                  <div className="h-48 bg-slate-800 relative">
-                    {t.ImageURL ? (
-                      <img src={`${API}${t.ImageURL}`} alt={t.Name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900 to-arena-950">
-                        <span className="text-4xl mb-2">🏟️</span>
-                        <span className="text-indigo-400/50 text-sm font-semibold tracking-widest uppercase">ArenaHub Turf</span>
-                      </div>
-                    )}
-                    <span className={`absolute top-4 right-4 text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-md ${t.Status === 'MAINTENANCE' ? 'bg-amber-500/80 text-white' : 'bg-emerald-500/80 text-white'}`}>
+                  {/* Image header: auto-slide when multiple photos */}
+                  <div className="h-48 bg-slate-800 relative isolate">
+                    <VenueImageCarousel urls={turfUrls} alt={t.Name} emptyVariant="owner" />
+                    <span className={`absolute top-4 right-4 z-10 text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-md ${t.Status === 'MAINTENANCE' ? 'bg-amber-500/80 text-white' : 'bg-emerald-500/80 text-white'}`}>
                       {t.Status}
                     </span>
+                    {turfUrls.length > 1 && (
+                      <span className="absolute top-4 left-4 z-10 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-black/55 text-white border border-white/10 backdrop-blur-sm">
+                        {turfUrls.length} photos
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-white">{t.Name}</h3>
-                        <p className="text-sm text-slate-400">{t.Location || 'No location set'} • {t.SportType}</p>
+                    <div className="flex justify-between items-start gap-3 mb-4">
+                      <div className="flex gap-3 min-w-0">
+                        {turfUrls[0] ? (
+                          <div className="h-14 w-14 rounded-xl overflow-hidden border-2 border-accent/40 shrink-0 shadow-md ring-1 ring-white/10 bg-slate-900">
+                            <img src={turfUrls[0]} alt="" className="h-full w-full object-cover" />
+                          </div>
+                        ) : null}
+                        <div className="min-w-0">
+                          <h3 className="text-xl font-bold text-white truncate">{t.Name}</h3>
+                          <p className="text-sm text-slate-400">{t.Location || 'No location set'} • {t.SportType}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <p className="text-xl font-bold text-emerald-400">Rs. {t.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
                       </div>
                     </div>
@@ -422,7 +496,8 @@ const OwnerDashboard = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
               {myTurfs.length === 0 && (
                 <div className="col-span-full py-20 brutal-card flex flex-col items-center justify-center">
                   <span className="text-6xl mb-4 opacity-50">🏟️</span>
@@ -522,10 +597,10 @@ const OwnerDashboard = () => {
         {/* ═══ Edit Venue Modal ═══ */}
         {editingTurfId && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="glass rounded-3xl p-8 w-full max-w-2xl animate-fade-in-up border border-white/10">
+            <div className="glass rounded-3xl p-8 w-full max-w-2xl animate-fade-in-up border border-white/10 max-h-[95vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-white">Edit Venue Details</h3>
-                <button onClick={() => setEditingTurfId(null)} className="text-slate-400 hover:text-white transition-all">
+                <button type="button" onClick={closeEditModal} className="text-slate-400 hover:text-white transition-all">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
@@ -565,14 +640,80 @@ const OwnerDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Add More Photos (Optional)</label>
-                  <input type="file" multiple onChange={e => setEditForm({...editForm, imageFiles: Array.from(e.target.files)})}
-                    className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-500/10 file:text-indigo-400 hover:file:bg-indigo-500/20" />
-                  <p className="text-[10px] text-slate-500 mt-1">* New photos will be added to the gallery. Existing photos are preserved.</p>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Venue photos</label>
+                  {existingEditPhotoUrls.length > 0 && (
+                    <div className="mb-4 p-3 rounded-xl bg-white/5 border border-white/10">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Current gallery</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {existingEditPhotoUrls.map((src, i) => {
+                          const pathKey = toStoredImagePath(src);
+                          const busy = removingPhotoPath === pathKey;
+                          return (
+                            <div
+                              key={`ex-${i}-${pathKey}`}
+                              className={`relative h-20 w-20 rounded-lg overflow-hidden border border-white/15 ring-1 ring-white/10 shadow-md bg-slate-900 shrink-0 ${busy ? 'opacity-60' : ''}`}
+                            >
+                              <img src={src} alt="" className="h-full w-full object-cover" />
+                              {i === 0 && (
+                                <span className="absolute bottom-0 left-0 right-0 bg-black/75 text-[9px] text-center text-white py-0.5 font-bold uppercase tracking-tighter">
+                                  Cover
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeGalleryImage(src)}
+                                disabled={removingPhotoPath != null}
+                                title="Remove from gallery"
+                                className="absolute top-0.5 right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-rose-600 text-white text-sm font-bold leading-none shadow-lg opacity-90 hover:bg-rose-500 hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                              >
+                                {busy ? '…' : '×'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => setEditForm({ ...editForm, imageFiles: Array.from(e.target.files || []) })}
+                    className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-500/10 file:text-indigo-400 hover:file:bg-indigo-500/20"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">New uploads are appended to the gallery. Thumbnails update after you save.</p>
+                  {newPhotoPreviewUrls.length > 0 && (
+                    <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 mb-2">Adding to gallery</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {newPhotoPreviewUrls.map((src, i) => (
+                          <div
+                            key={`new-${i}-${src}`}
+                            className="relative h-20 w-20 rounded-lg overflow-hidden border-2 border-emerald-400/60 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-900/40 shrink-0"
+                          >
+                            <img src={src} alt="" className="h-full w-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditForm({
+                                  ...editForm,
+                                  imageFiles: editForm.imageFiles.filter((_, j) => j !== i),
+                                })
+                              }
+                              title="Remove from upload queue"
+                              className="absolute top-0.5 right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900/90 text-white text-sm font-bold leading-none border border-white/20 hover:bg-rose-600 transition-colors"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 mt-8">
-                  <button type="button" onClick={() => setEditingTurfId(null)} 
+                  <button type="button" onClick={closeEditModal}
                     className="flex-1 py-3 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all">Cancel</button>
                   <button type="submit" 
                     className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all">

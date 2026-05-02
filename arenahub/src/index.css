@@ -1,63 +1,177 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════
-   ArenaHub — Kinetic Brutalism Design Tokens
+   ArenaHub — Stadium / pitch sports theme
    ═══════════════════════════════════════════════════ */
 
 @theme {
-  --font-sans: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
   --color-accent: var(--role-color);
   --color-accent-light: var(--role-color-light);
   --color-accent-dark: var(--role-color-dark);
-  
+
   --color-zinc-950: #09090b;
   --color-zinc-900: #18181b;
   --color-zinc-800: #27272a;
+
+  --color-arena-950: #050a08;
+  --color-arena-900: #0c1410;
+  --color-arena-800: #1a2420;
 }
 
 :root {
-  /* Default to Player/Emerald if no role */
-  --role-color: #10b981;
-  --role-color-light: #34d399;
-  --role-color-dark: #059669;
+  --font-display: "Bebas Neue", "Arial Narrow", Impact, sans-serif;
+  --pitch-mid: #0a1612;
+  --role-color: #00d68a;
+  --role-color-light: #34f5b3;
+  --role-color-dark: #00a86b;
 }
 
 [data-role="Player"] {
-  --role-color: #10b981;
-  --role-color-light: #34d399;
-  --role-color-dark: #059669;
+  --role-color: #00d68a;
+  --role-color-light: #34f5b3;
+  --role-color-dark: #00a86b;
 }
 
 [data-role="Captain"] {
-  --role-color: #f59e0b;
-  --role-color-light: #fbbf24;
-  --role-color-dark: #d97706;
+  --role-color: #ffb020;
+  --role-color-light: #ffd060;
+  --role-color-dark: #e09000;
 }
 
 [data-role="Owner"] {
-  --role-color: #6366f1;
-  --role-color-light: #818cf8;
-  --role-color-dark: #4f46e5;
+  --role-color: #7c8dff;
+  --role-color-light: #a8b4ff;
+  --role-color-dark: #5c6cff;
 }
 
 [data-role="Admin"] {
-  --role-color: #f43f5e;
-  --role-color-light: #fb7185;
+  --role-color: #ff4d6d;
+  --role-color-light: #ff8a9e;
   --role-color-dark: #e11d48;
 }
 
+/* Jersey / scoreboard display type */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+
+.sports-kicker {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: color-mix(in srgb, var(--role-color) 85%, white);
+}
+
+/* Pitch stripes + half-line — use as absolute inset-0 layer over gradient */
+.sports-field-overlay {
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      105deg,
+      transparent,
+      transparent 72px,
+      rgba(255, 255, 255, 0.028) 72px,
+      rgba(255, 255, 255, 0.028) 73px
+    ),
+    radial-gradient(ellipse 95% 75% at 50% 100%, rgba(0, 214, 138, 0.14), transparent 56%),
+    radial-gradient(ellipse 55% 45% at 12% 18%, rgba(0, 200, 255, 0.07), transparent 42%);
+}
+
+.sports-midline {
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 4%,
+    rgba(255, 255, 255, 0.14) 38%,
+    rgba(255, 255, 255, 0.14) 62%,
+    transparent 96%
+  );
+}
+
 /* ═══════════════════════════════════════════════════
-   Base Styles & Noise Overlay
+   Base — night stadium atmosphere
    ═══════════════════════════════════════════════════ */
 
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background-color: var(--color-zinc-950);
-  color: #e2e8f0;
+  background-color: var(--pitch-mid);
+  background-image:
+    repeating-linear-gradient(
+      -18deg,
+      transparent,
+      transparent 56px,
+      rgba(255, 255, 255, 0.018) 56px,
+      rgba(255, 255, 255, 0.018) 57px
+    ),
+    radial-gradient(ellipse 130% 90% at 50% 115%, rgba(0, 214, 138, 0.09), transparent 52%),
+    radial-gradient(ellipse 100% 70% at 0% -15%, color-mix(in srgb, var(--role-color) 16%, transparent), transparent 58%),
+    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(99, 102, 241, 0.07), transparent 50%);
+  background-attachment: fixed;
+  color: #e8f0ec;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Center-line glow — desktop only */
+@media (min-width: 1024px) {
+  body::after {
+    content: "";
+    position: fixed;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.035) 25%,
+      rgba(255, 255, 255, 0.035) 75%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+.glass {
+  position: relative;
+  background: linear-gradient(
+    165deg,
+    rgba(22, 32, 28, 0.82) 0%,
+    rgba(12, 18, 16, 0.78) 100%
+  );
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px color-mix(in srgb, var(--role-color) 12%, transparent),
+    0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.glass::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--role-color) 70%, white),
+    transparent
+  );
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 #root {
@@ -67,7 +181,6 @@ body {
   position: relative;
 }
 
-/* Aggressive Noise Texture Overlay */
 body::before {
   content: "";
   position: fixed;
@@ -77,18 +190,29 @@ body::before {
   height: 100%;
   pointer-events: none;
   z-index: 9999;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
 }
 
 /* ═══════════════════════════════════════════════════
-   Brutalist Primitives
+   Cards — mesh jersey texture
    ═══════════════════════════════════════════════════ */
 
-/* Remove glassmorphism entirely, use solid borders and colors */
 .brutal-card {
   background-color: var(--color-zinc-900);
+  background-image: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.04) 12.5%,
+      transparent 12.5%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.04) 50%,
+      rgba(255, 255, 255, 0.04) 62.5%,
+      transparent 62.5%,
+      transparent
+    ),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent);
+  background-size: 10px 10px, 100% 100%;
   border: 2px solid var(--color-zinc-800);
-  border-radius: 0; /* Sharp 0px corners */
+  border-radius: 0;
   transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
@@ -117,34 +241,125 @@ body::before {
   color: #000;
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-zinc-950);
+  background: var(--pitch-mid);
   border-left: 1px solid var(--color-zinc-900);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--role-color);
+  background: linear-gradient(180deg, var(--role-color), var(--role-color-dark));
   border-radius: 0;
 }
 
 /* ═══════════════════════════════════════════════════
-   Kinetic Animations
+   Motion
    ═══════════════════════════════════════════════════ */
 
 @keyframes pulse-heartbeat {
-  0% { transform: scale(1); }
-  14% { transform: scale(1.02); }
-  28% { transform: scale(1); }
-  42% { transform: scale(1.02); }
-  70% { transform: scale(1); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.02);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.02);
+  }
+  70% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .animate-pulse-heartbeat {
   animation: pulse-heartbeat 2s infinite;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes kinetic-marquee-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.kinetic-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: kinetic-marquee-scroll 38s linear infinite;
+}
+
+.kinetic-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-heartbeat,
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-slide-in-right,
+  .kinetic-marquee-track,
+  .brutal-card {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .kinetic-marquee-track {
+    transform: none;
+  }
+
+  .clip-unmask {
+    animation: none;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
 }
 
 .clip-unmask {

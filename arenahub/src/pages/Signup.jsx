@@ -122,6 +122,8 @@ const Signup = () => {
       {/* ── Left Side: Hero / Branding ── */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-arena-950 via-arena-900 to-emerald-950 z-10" />
+        <div className="absolute inset-0 z-[11] sports-field-overlay" aria-hidden />
+        <div className="absolute left-0 right-0 top-[44%] h-0.5 z-[12] sports-midline" aria-hidden />
 
         {/* Decorative blurs */}
         <div className="absolute inset-0 z-20 opacity-10">
@@ -133,19 +135,24 @@ const Signup = () => {
         <div className="relative z-30 flex flex-col justify-center px-16 w-full">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/30">
-              A
-            </div>
-            <span className="text-2xl font-bold text-white">
-              Arena<span className="text-emerald-400">Hub</span>
+            <span className="relative">
+              <span className="absolute -inset-1 rounded-md bg-gradient-to-r from-emerald-400 to-cyan-400 opacity-45 blur-md" aria-hidden />
+              <span className="relative flex w-12 h-12 items-center justify-center rounded-md border-2 border-emerald-400 bg-[#0a1210] font-display text-2xl text-emerald-400">
+                A
+              </span>
+            </span>
+            <span className="font-display text-3xl text-white tracking-[0.14em]">
+              ARENA<span className="text-emerald-400">HUB</span>
             </span>
           </div>
 
-          <h1 className="text-5xl font-extrabold text-white leading-tight mb-6">
+          <p className="sports-kicker mb-2 text-emerald-400/90">Draft your squad</p>
+
+          <h1 className="text-6xl md:text-7xl font-display text-white leading-[0.95] mb-6 uppercase">
             Your arena
             <br />
-            <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-              awaits.
+            <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-cyan-300 bg-clip-text text-transparent">
+              awaits
             </span>
           </h1>
 
@@ -177,21 +184,22 @@ const Signup = () => {
         <div className="w-full max-w-md relative z-10">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-emerald-500/25">
+            <span className="flex w-10 h-10 items-center justify-center rounded-md border-2 border-emerald-400 bg-[#0a1210] font-display text-xl text-emerald-400">
               A
-            </div>
-            <span className="text-xl font-bold text-white">
-              Arena<span className="text-emerald-400">Hub</span>
+            </span>
+            <span className="font-display text-2xl text-white tracking-[0.12em]">
+              ARENA<span className="text-emerald-400">HUB</span>
             </span>
           </div>
 
           {/* Header */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">
-              {step === 1 ? 'Choose your role' : 'Create your account'}
+            <p className="sports-kicker mb-2">Rookie combine</p>
+            <h2 className="font-display text-4xl text-white mb-2 uppercase tracking-wide">
+              {step === 1 ? 'Pick your position' : 'Suit up'}
             </h2>
-            <p className="text-slate-400">
-              {step === 1 ? 'How will you use ArenaHub?' : `Signing up as ${selectedRole?.label}`}
+            <p className="text-slate-400 text-sm">
+              {step === 1 ? 'Player, captain, or owner — choose how you run the floor.' : `Signing up as ${selectedRole?.label}`}
             </p>
           </div>
 
@@ -364,7 +372,7 @@ const Signup = () => {
                 type="submit"
                 disabled={isLoading || (formData.confirmPassword && formData.confirmPassword !== formData.password)}
                 id="signup-submit-button"
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold text-sm hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+                className="w-full py-3.5 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm uppercase tracking-widest hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-[0_0_28px_-6px_rgba(16,185,129,0.7)] border border-emerald-400/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
               >
                 {isLoading ? (
                   <>

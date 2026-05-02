@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ChatWidget from '../components/ChatWidget';
 import TurfDetailModal from '../components/TurfDetailModal';
+import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -294,8 +295,9 @@ const PlayerDashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">Player Dashboard</h1>
-            <p className="text-slate-400 mt-1">Find venues, join games, and track your bookings</p>
+            <p className="sports-kicker mb-1">Home pitch</p>
+            <h1 className="font-display text-4xl sm:text-5xl text-white uppercase tracking-wide">Player bench</h1>
+            <p className="text-slate-400 mt-2 text-sm max-w-lg">Hunt venues, jump into public runs, and keep every booking in your highlight reel.</p>
           </div>
           {/* Wallet Card */}
           <div className="glass rounded-2xl px-6 py-4 flex items-center gap-4">
@@ -311,7 +313,7 @@ const PlayerDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
+        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
           {[
             { key: 'turfs', label: '🏟️ Browse Turfs', },
             { key: 'games', label: '⚽ Public Games', },
@@ -319,7 +321,7 @@ const PlayerDashboard = () => {
             { key: 'wallet', label: '💰 My Wallet', },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.key ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+              className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === tab.key ? 'bg-emerald-500/15 text-white border-emerald-400 shadow-[0_0_20px_-8px_rgba(52,211,153,0.5)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
               {tab.label}
             </button>
           ))}
@@ -354,23 +356,30 @@ const PlayerDashboard = () => {
 
             {/* Turf Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {turfs.map(turf => (
+              {turfs.map((turf) => {
+                const turfUrls = collectTurfImageUrls(turf, API);
+                return (
                 <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden group transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10' : 'hover:border-emerald-500/30'}`}>
-                  {/* Image Header */}
-                  <div className="h-36 bg-slate-800 relative">
-                    {turf.ImageURL ? (
-                      <img src={`${API}${turf.ImageURL}`} alt={turf.Name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-emerald-900/40 to-arena-800">
-                        <span className="text-4xl mb-2 opacity-40">🏟️</span>
-                      </div>
+                  <div className="h-36 bg-slate-800 relative isolate">
+                    <VenueImageCarousel urls={turfUrls} alt={turf.Name} emptyVariant="player" />
+                    {turfUrls.length > 1 && (
+                      <span className="absolute top-2 left-2 z-10 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-black/55 text-white border border-white/10 backdrop-blur-sm">
+                        {turfUrls.length} photos
+                      </span>
                     )}
                   </div>
                   <div className="p-5">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="text-lg font-semibold text-white">{turf.Name}</h3>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{turf.SportType}</span>
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="flex gap-2.5 min-w-0">
+                        {turfUrls[0] ? (
+                          <div className="h-12 w-12 rounded-lg overflow-hidden border-2 border-emerald-500/40 shrink-0 shadow-md ring-1 ring-white/10 bg-slate-900">
+                            <img src={turfUrls[0]} alt="" className="h-full w-full object-cover" />
+                          </div>
+                        ) : null}
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold text-white truncate">{turf.Name}</h3>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{turf.SportType}</span>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-emerald-400">Rs. {turf.PricePerHour}<span className="text-xs text-slate-500">/hr</span></p>
@@ -435,7 +444,8 @@ const PlayerDashboard = () => {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
               {turfs.length === 0 && <p className="text-slate-500 col-span-full text-center py-12">No venues found matching your criteria.</p>}
             </div>
 

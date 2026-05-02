@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -49,6 +50,8 @@ const Login = () => {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-arena-950 via-arena-900 to-emerald-950 z-10" />
+        <div className="absolute inset-0 z-[11] sports-field-overlay" aria-hidden />
+        <div className="absolute left-0 right-0 top-[44%] h-0.5 z-[12] sports-midline" aria-hidden />
 
         {/* Decorative pattern */}
         <div className="absolute inset-0 z-20 opacity-10">
@@ -59,42 +62,81 @@ const Login = () => {
 
         {/* Content */}
         <div className="relative z-30 flex flex-col justify-center px-16 w-full">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/30">
-              A
-            </div>
-            <span className="text-2xl font-bold text-white">
-              Arena<span className="text-emerald-400">Hub</span>
+          <motion.div
+            className="flex items-center gap-3 mb-12"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <motion.span
+              className="relative inline-flex"
+              whileHover={{ scale: 1.06, rotate: -2 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+            >
+              <span className="absolute -inset-1 rounded-md bg-gradient-to-r from-emerald-400 to-cyan-400 opacity-50 blur-md" aria-hidden />
+              <span className="relative flex w-12 h-12 items-center justify-center rounded-md border-2 border-emerald-400 bg-[#0a1210] font-display text-2xl text-emerald-400">
+                A
+              </span>
+            </motion.span>
+            <span className="font-display text-3xl text-white tracking-[0.14em]">
+              ARENA<span className="text-emerald-400">HUB</span>
             </span>
-          </div>
+          </motion.div>
 
-          <h1 className="text-5xl font-extrabold text-white leading-tight mb-6">
-            Book. Play.
+          <p className="sports-kicker mb-2 text-emerald-400/90">Matchday access</p>
+
+          <motion.h1
+            className="text-6xl md:text-7xl font-display text-white leading-[0.95] mb-6 uppercase"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          >
+            Book · Play ·
             <br />
-            <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-              Dominate.
+            <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-cyan-300 bg-clip-text text-transparent">
+              Dominate
             </span>
-          </h1>
+          </motion.h1>
 
-          <p className="text-lg text-slate-400 max-w-md leading-relaxed mb-10">
-            The premium sports venue marketplace. Find turfs, build squads, 
+          <motion.p
+            className="text-lg text-slate-400 max-w-md leading-relaxed mb-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.45 }}
+          >
+            The premium sports venue marketplace. Find turfs, build squads,
             and own the pitch — all in one platform.
-          </p>
+          </motion.p>
 
-          {/* Stats */}
-          <div className="flex gap-8">
+          <motion.div
+            className="flex gap-8"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: { staggerChildren: 0.1, delayChildren: 0.28 },
+              },
+            }}
+          >
             {[
               { value: '2,500+', label: 'Active Venues' },
               { value: '15K+', label: 'Monthly Games' },
               { value: '50K+', label: 'Players' },
             ].map((stat) => (
-              <div key={stat.label}>
+              <motion.div
+                key={stat.label}
+                variants={{
+                  hidden: { opacity: 0, y: 12 },
+                  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
+                }}
+              >
                 <p className="text-2xl font-bold text-white">{stat.value}</p>
                 <p className="text-sm text-slate-500">{stat.label}</p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
 
@@ -103,21 +145,27 @@ const Login = () => {
         {/* Subtle background glow */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full filter blur-[120px]" />
 
-        <div className="w-full max-w-md relative z-10">
+        <motion.div
+          className="w-full max-w-md relative z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+        >
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-emerald-500/25">
+            <span className="flex w-10 h-10 items-center justify-center rounded-md border-2 border-emerald-400 bg-[#0a1210] font-display text-xl text-emerald-400">
               A
-            </div>
-            <span className="text-xl font-bold text-white">
-              Arena<span className="text-emerald-400">Hub</span>
+            </span>
+            <span className="font-display text-2xl text-white tracking-[0.12em]">
+              ARENA<span className="text-emerald-400">HUB</span>
             </span>
           </div>
 
           {/* Header */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
-            <p className="text-slate-400">Enter your credentials to access your account</p>
+            <p className="sports-kicker mb-2">Locker room</p>
+            <h2 className="font-display text-4xl text-white mb-2 uppercase tracking-wide">Welcome back</h2>
+            <p className="text-slate-400 text-sm">Sign in to hit the pitch — same account, every venue.</p>
           </div>
 
           {/* Error Message */}
@@ -218,7 +266,7 @@ const Login = () => {
               type="submit"
               disabled={isLoading}
               id="login-submit-button"
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold text-sm hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm uppercase tracking-widest hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-[0_0_28px_-6px_rgba(16,185,129,0.7)] border border-emerald-400/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -256,7 +304,7 @@ const Login = () => {
             <span className="text-slate-500 hover:text-slate-400 cursor-pointer">Terms</span> &{' '}
             <span className="text-slate-500 hover:text-slate-400 cursor-pointer">Privacy Policy</span>
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

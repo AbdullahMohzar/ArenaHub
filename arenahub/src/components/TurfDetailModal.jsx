@@ -161,8 +161,8 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
             
             {/* Title & Badge */}
             <div className="absolute bottom-6 left-6 right-6">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white mb-2 shadow-lg">{turf.SportType}</span>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-white drop-shadow-md">{turf.Name}</h1>
+              <span className="inline-flex items-center px-3 py-1 rounded-sm text-[10px] font-display tracking-[0.15em] uppercase bg-emerald-500 text-white mb-2 shadow-lg border border-emerald-300/30">{turf.SportType}</span>
+              <h1 className="text-3xl sm:text-5xl font-display text-white drop-shadow-md uppercase tracking-wide leading-none">{turf.Name}</h1>
             </div>
           </div>
 
@@ -197,7 +197,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                 </div>
                 
                 <div className="mt-6 space-y-3">
-                  <button onClick={() => { onClose(); onBookNow(turf); }} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20 hover:scale-[1.02] transition-transform">
+                  <button onClick={() => { onClose(); onBookNow(turf); }} className="w-full py-3 rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm uppercase tracking-widest shadow-[0_0_24px_-6px_rgba(16,185,129,0.55)] border border-emerald-400/25 hover:scale-[1.02] transition-transform">
                     Book Now
                   </button>
                   <button onClick={() => openChatSidebar(turf.OwnerID, 'Owner')} className="w-full py-3 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold hover:bg-indigo-500/30 transition-colors flex items-center justify-center gap-2">

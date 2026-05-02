@@ -344,16 +344,6 @@ const ChatSidebar = () => {
         </div>
       )}
 
-      {/* ── Slide-in animation ── */}
-      <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0.8; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in-right {
-          animation: slideInRight 0.3s ease-out;
-        }
-      `}</style>
     </>
   );
 };

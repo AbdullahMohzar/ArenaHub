@@ -75,16 +75,17 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-arena-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col mb-8">
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <span className="text-rose-500">🛡️</span> Admin Console
+          <p className="sports-kicker mb-1 text-rose-400/90">League office</p>
+          <h1 className="font-display text-4xl sm:text-5xl text-white uppercase tracking-wide flex items-center gap-3">
+            <span className="text-rose-500 not-italic">🛡️</span> Commish console
           </h1>
-          <p className="text-slate-400 mt-1">System-wide monitoring, user governance, and financial dispute resolution.</p>
+          <p className="text-slate-400 mt-2 text-sm max-w-2xl">League-wide ops — rosters, bans, and money plays when matches get voided.</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
-          <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-rose-500/20 text-rose-400' : 'text-slate-400 hover:text-white'}`}>👥 User Governance</button>
-          <button onClick={() => setActiveTab('disputes')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'disputes' ? 'bg-rose-500/20 text-rose-400' : 'text-slate-400 hover:text-white'}`}>⚖️ Dispute & Refunds</button>
+        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
+          <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'users' ? 'bg-rose-500/15 text-rose-300 border-rose-400 shadow-[0_0_20px_-8px_rgba(251,113,133,0.45)]' : 'text-slate-400 hover:text-white border-transparent'}`}>👥 User Governance</button>
+          <button onClick={() => setActiveTab('disputes')} className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'disputes' ? 'bg-rose-500/15 text-rose-300 border-rose-400 shadow-[0_0_20px_-8px_rgba(251,113,133,0.45)]' : 'text-slate-400 hover:text-white border-transparent'}`}>⚖️ Dispute & Refunds</button>
         </div>
 
         {/* ═══ TAB: Users ═══ */}

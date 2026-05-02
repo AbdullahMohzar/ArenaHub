@@ -370,6 +370,75 @@ public class TurfServlet extends HttpServlet {
                         }
                         break;
                     }
+                    case "REMOVE_TURF_IMAGE": {
+                        Object uidAttr = req.getAttribute("validatedUserId");
+                        if (uidAttr == null) {
+                            resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            resp.getWriter().write("{\"error\":\"Unauthorized\"}");
+                            return;
+                        }
+                        int requestUserId = Integer.parseInt(uidAttr.toString());
+                        String imageUrlRaw = json.get("imageUrl").getAsString().trim();
+                        String imageUrl = normalizeTurfImagePath(imageUrlRaw);
+
+                        String ownSql = "SELECT OwnerID, ImageURL FROM Turfs WHERE TurfID = ?";
+                        try (PreparedStatement ownStmt = conn.prepareStatement(ownSql)) {
+                            ownStmt.setInt(1, turfId);
+                            try (ResultSet ors = ownStmt.executeQuery()) {
+                                if (!ors.next()) {
+                                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                                    resp.getWriter().write("{\"error\":\"Venue not found\"}");
+                                    return;
+                                }
+                                if (ors.getInt("OwnerID") != requestUserId) {
+                                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                    resp.getWriter().write("{\"error\":\"Not allowed to edit this venue\"}");
+                                    return;
+                                }
+                            }
+                        }
+
+                        String delSql = "DELETE FROM TurfImages WHERE TurfID = ? AND ImageURL = ?";
+                        try (PreparedStatement delStmt = conn.prepareStatement(delSql)) {
+                            delStmt.setInt(1, turfId);
+                            delStmt.setString(2, imageUrl);
+                            delStmt.executeUpdate();
+                        }
+
+                        String getPrimarySql = "SELECT ImageURL FROM Turfs WHERE TurfID = ?";
+                        String currentPrimary = null;
+                        try (PreparedStatement gp = conn.prepareStatement(getPrimarySql)) {
+                            gp.setInt(1, turfId);
+                            try (ResultSet grs = gp.executeQuery()) {
+                                if (grs.next()) {
+                                    currentPrimary = grs.getString("ImageURL");
+                                }
+                            }
+                        }
+
+                        if (currentPrimary != null && currentPrimary.equals(imageUrl)) {
+                            String nextUrl = null;
+                            String nextSql = "SELECT ImageURL FROM TurfImages WHERE TurfID = ? ORDER BY ImageID ASC LIMIT 1";
+                            try (PreparedStatement ns = conn.prepareStatement(nextSql)) {
+                                ns.setInt(1, turfId);
+                                try (ResultSet nrs = ns.executeQuery()) {
+                                    if (nrs.next()) {
+                                        nextUrl = nrs.getString("ImageURL");
+                                    }
+                                }
+                            }
+                            String updPrim = "UPDATE Turfs SET ImageURL = ? WHERE TurfID = ?";
+                            try (PreparedStatement up = conn.prepareStatement(updPrim)) {
+                                up.setString(1, nextUrl);
+                                up.setInt(2, turfId);
+                                up.executeUpdate();
+                            }
+                        }
+
+                        resp.setStatus(HttpServletResponse.SC_OK);
+                        resp.getWriter().write("{\"message\":\"Image removed\"}");
+                        return;
+                    }
                 }
 
                 resp.setStatus(HttpServletResponse.SC_OK);
@@ -379,6 +448,20 @@ public class TurfServlet extends HttpServlet {
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             resp.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
         }
+    }
+
+    /** Strip host so client can send full URL or path; DB stores paths like /uploads/turfs/... */
+    private static String normalizeTurfImagePath(String raw) {
+        if (raw == null || raw.isEmpty()) return "";
+        String s = raw.trim();
+        int uploadsIdx = s.indexOf("/uploads/");
+        if (uploadsIdx >= 0) {
+            return s.substring(uploadsIdx);
+        }
+        if (!s.startsWith("/")) {
+            return "/" + s;
+        }
+        return s;
     }
 
     // DELETE /api/turfs?turfId=123
