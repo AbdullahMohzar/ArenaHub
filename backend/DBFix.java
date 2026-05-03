@@ -1,15 +1,13 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.Statement;
 import java.sql.SQLException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.sql.Statement;
 
 public class DBFix {
     public static void main(String[] args) {
         String url = "jdbc:mysql://localhost:3306/ArenaHub";
         String user = "root";
-        String password = "pass";
+        String password = "";
 
         String[] statements = {
                 "ALTER TABLE Users ADD COLUMN Status VARCHAR(20) DEFAULT 'ACTIVE'",

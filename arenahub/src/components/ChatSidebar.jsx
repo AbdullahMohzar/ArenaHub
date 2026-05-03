@@ -35,6 +35,7 @@ const ChatSidebar = () => {
       const res = await fetch(`${API}/api/chat/contacts`, { headers });
       if (res.ok) {
         const data = await res.json();
+        // data contains objects with id, name, role, lastMessage, unreadCount, etc.
         setContacts(data);
         setTotalUnread(data.reduce((sum, c) => sum + (c.unreadCount || 0), 0));
       }
@@ -66,11 +67,11 @@ const ChatSidebar = () => {
     try {
       const res = await fetch(`${API}/api/chat/send`, {
         method: 'POST', headers,
-        body: JSON.stringify({ receiverId: activeContact.userId, content: newMessage })
+        body: JSON.stringify({ contactId: activeContact.id, content: newMessage })
       });
       if (res.ok) {
         setNewMessage('');
-        fetchMessages(activeContact.userId);
+        fetchMessages(activeContact.id);
         fetchContacts();
       }
     } catch (err) { console.error('Error sending message:', err); }
@@ -79,21 +80,23 @@ const ChatSidebar = () => {
   // ── Open a conversation ──
   const openChat = (contact) => {
     setActiveContact(contact);
-    fetchMessages(contact.userId);
-    markAsRead(contact.userId);
+    fetchMessages(contact.id);
+    markAsRead(contact.id);
   };
 
   // ── Listen for "open-chat-sidebar" custom events from dashboard buttons ──
   useEffect(() => {
     const handler = (e) => {
-      const { contactUserId, contactName, contactRole } = e.detail;
+      // contactId should be passed now, or we fallback to 'U_' + contactUserId
+      const { contactId, contactUserId, contactName, contactRole } = e.detail;
+      const finalContactId = contactId || ('U_' + contactUserId);
       setIsOpen(true);
-      const existing = contacts.find(c => c.userId === contactUserId);
+      const existing = contacts.find(c => c.id === finalContactId);
       if (existing) {
         openChat(existing);
       } else {
         // Create a temporary contact entry
-        const temp = { userId: contactUserId, name: contactName || 'User', role: contactRole || 'Player', lastMessage: '', unreadCount: 0 };
+        const temp = { id: finalContactId, name: contactName || 'User', role: contactRole || 'Player', lastMessage: '', unreadCount: 0 };
         openChat(temp);
       }
     };
@@ -124,7 +127,7 @@ const ChatSidebar = () => {
 
   useEffect(() => {
     if (!activeContact) return;
-    const msgPoll = setInterval(() => fetchMessages(activeContact.userId), 5000);
+    const msgPoll = setInterval(() => fetchMessages(activeContact.id), 5000);
     return () => clearInterval(msgPoll);
   }, [activeContact]);
 
@@ -299,7 +302,7 @@ const ChatSidebar = () => {
                   <div className="divide-y divide-white/5">
                     {contacts.map(contact => (
                       <button
-                        key={contact.userId}
+                        key={contact.id}
                         onClick={() => openChat(contact)}
                         className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-all text-left group"
                       >

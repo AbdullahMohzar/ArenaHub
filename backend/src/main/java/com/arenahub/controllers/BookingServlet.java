@@ -84,6 +84,12 @@ public class BookingServlet extends HttpServlet {
         // ── BRANCH 2: Public Games — Fetch all public confirmed bookings ──
         String publicGames = req.getParameter("publicGames");
         if ("true".equalsIgnoreCase(publicGames)) {
+            String userIdParam = req.getParameter("userId");
+            int currentUserId = -1;
+            if (userIdParam != null && !userIdParam.isEmpty()) {
+                try { currentUserId = Integer.parseInt(userIdParam); } catch (Exception e) {}
+            }
+
             try (Connection conn = DatabaseConnection.getConnection()) {
                 String sql = "SELECT b.BookingID, b.UserID, b.TurfID, b.BookingDate, b.StartTime, b.EndTime, " +
                              "b.Visibility, b.MaxPlayers, b.CurrentPlayers, b.Status, " +
@@ -99,7 +105,8 @@ public class BookingServlet extends HttpServlet {
                     JsonArray arr = new JsonArray();
                     while (rs.next()) {
                         JsonObject game = new JsonObject();
-                        game.addProperty("BookingID", rs.getInt("BookingID"));
+                        int bookingId = rs.getInt("BookingID");
+                        game.addProperty("BookingID", bookingId);
                         game.addProperty("HostUserID", rs.getInt("UserID"));
                         game.addProperty("HostName", rs.getString("HostName"));
                         game.addProperty("TurfID", rs.getInt("TurfID"));
@@ -111,6 +118,20 @@ public class BookingServlet extends HttpServlet {
                         game.addProperty("MaxPlayers", rs.getInt("MaxPlayers"));
                         game.addProperty("CurrentPlayers", rs.getInt("CurrentPlayers"));
                         game.addProperty("PricePerHour", rs.getDouble("PricePerHour"));
+
+                        boolean hasJoined = false;
+                        if (currentUserId != -1) {
+                            String checkSql = "SELECT 1 FROM GameParticipants WHERE BookingID = ? AND UserID = ? AND Status = 'JOINED'";
+                            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                                checkStmt.setInt(1, bookingId);
+                                checkStmt.setInt(2, currentUserId);
+                                try (ResultSet crs = checkStmt.executeQuery()) {
+                                    if (crs.next()) { hasJoined = true; }
+                                }
+                            }
+                        }
+                        game.addProperty("HasJoined", hasJoined);
+
                         arr.add(game);
                     }
                     resp.setStatus(HttpServletResponse.SC_OK);
@@ -505,10 +526,50 @@ public class BookingServlet extends HttpServlet {
                     resp.getWriter().write("{\"message\":\"Successfully joined the game!\"}");
                 }
 
-                else {
-                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    resp.getWriter().write("{\"error\":\"Invalid action. Use CANCEL or JOIN.\"}");
-                }
+                 else if ("LEAVE".equalsIgnoreCase(action)) {
+                     int userId = jsonRequest.has("userId") ? jsonRequest.get("userId").getAsInt() : -1;
+                     if (userId == -1) {
+                         resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                         resp.getWriter().write("{\"error\":\"userId required for LEAVE\"}");
+                         return;
+                     }
+
+                     // Verify user is actually a participant in this game
+                     String checkParticipantSql = "SELECT ParticipantID FROM GameParticipants WHERE BookingID = ? AND UserID = ? AND Status = 'JOINED'";
+                     try (PreparedStatement checkParticipantStmt = conn.prepareStatement(checkParticipantSql)) {
+                         checkParticipantStmt.setInt(1, bookingId);
+                         checkParticipantStmt.setInt(2, userId);
+                         try (ResultSet rs = checkParticipantStmt.executeQuery()) {
+                             if (!rs.next()) {
+                                 resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                                 resp.getWriter().write("{\"error\":\"You are not a participant in this game\"}");
+                                 return;
+                             }
+                         }
+                     }
+
+                     // Update participant status to LEFT
+                     String updateParticipantSql = "UPDATE GameParticipants SET Status = 'LEFT' WHERE BookingID = ? AND UserID = ?";
+                     try (PreparedStatement updateParticipantStmt = conn.prepareStatement(updateParticipantSql)) {
+                         updateParticipantStmt.setInt(1, bookingId);
+                         updateParticipantStmt.setInt(2, userId);
+                         updateParticipantStmt.executeUpdate();
+                     }
+
+                     // Decrement player count
+                     String decSql = "UPDATE Bookings SET CurrentPlayers = CurrentPlayers - 1 WHERE BookingID = ?";
+                     try (PreparedStatement decStmt = conn.prepareStatement(decSql)) {
+                         decStmt.setInt(1, bookingId);
+                         decStmt.executeUpdate();
+                     }
+
+                     resp.setStatus(HttpServletResponse.SC_OK);
+                     resp.getWriter().write("{\"message\":\"Successfully left the game!\"}");
+                 }
+                 else {
+                     resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                     resp.getWriter().write("{\"error\":\"Invalid action. Use CANCEL, JOIN, or LEAVE.\"}");
+                 }
             }
         } catch (SQLException | IOException e) {
             System.err.println("Booking action error: " + e.getMessage());

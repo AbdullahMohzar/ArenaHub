@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ChatWidget from '../components/ChatWidget';
 import TurfDetailModal from '../components/TurfDetailModal';
 import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
+import BookingPoster, { EmptyBookings } from '../components/BookingPoster';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -20,15 +20,15 @@ const CaptainDashboard = () => {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [activeTab, setActiveTab] = useState('book');
+  const [bookingFilter, setBookingFilter] = useState('UPCOMING');
   const location = useLocation();
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
   const [toppingUp, setToppingUp] = useState(false);
-  const [activeChatBookingId, setActiveChatBookingId] = useState(null);
 
   // Helper to open the global chat sidebar for direct messages
-  const openChatSidebar = (contactUserId, contactName, contactRole) => {
+  const openChatSidebar = (contactUserId, contactName, contactRole, contactId = null) => {
     window.dispatchEvent(new CustomEvent('open-chat-sidebar', {
-      detail: { contactUserId, contactName, contactRole }
+      detail: { contactId, contactUserId, contactName, contactRole }
     }));
   };
 
@@ -250,18 +250,7 @@ const CaptainDashboard = () => {
         </div>
       )}
 
-      {/* Squad Chat Widget (booking-based group chat only) */}
-      {activeChatBookingId && (
-        <ChatWidget 
-          currentUserId={userId} 
-          bookingId={activeChatBookingId} 
-          onClose={() => setActiveChatBookingId(null)} 
-          title="Squad Chat"
-        />
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <p className="sports-kicker mb-1">Sideline</p>
@@ -487,43 +476,46 @@ const CaptainDashboard = () => {
         {/* ═══ TAB: Squad Bookings ═══ */}
         {activeTab === 'bookings' && (
           <div className="animate-fade-in-up space-y-4">
-            {myBookings.map(b => (
-              <div key={b.BookingID} className="glass rounded-2xl p-5 flex flex-col sm:flex-row gap-5">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold text-white">{b.TurfName}</h3>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${b.Status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>{b.Status}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-y-2 mt-4 text-sm">
-                    <div><span className="text-slate-500">Date:</span> <span className="text-slate-300 ml-1">{b.BookingDate}</span></div>
-                    <div><span className="text-slate-500">Time:</span> <span className="text-slate-300 ml-1">{b.StartTime?.substring(0,5)} - {b.EndTime?.substring(0,5)}</span></div>
-                    <div><span className="text-slate-500">Type:</span> <span className={`ml-1 font-medium ${b.Visibility === 'PUBLIC' ? 'text-cyan-400' : 'text-slate-300'}`}>{b.Visibility}</span></div>
-                    {b.Visibility === 'PUBLIC' && (
-                      <div><span className="text-slate-500">Players:</span> <span className="text-slate-300 ml-1">{b.CurrentPlayers} / {b.MaxPlayers}</span></div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 justify-center sm:min-w-[140px]">
-                  {b.Status === 'CONFIRMED' && (
-                    <>
-                      <button onClick={() => toggleVisibility(b.BookingID)} className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-all ${b.Visibility === 'PUBLIC' ? 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10' : 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10'}`}>
-                        Make {b.Visibility === 'PUBLIC' ? 'Private' : 'Public'}
-                      </button>
-                      {b.Visibility === 'PUBLIC' && (
-                        <button onClick={() => setActiveChatBookingId(b.BookingID)} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all flex items-center justify-center gap-1.5">
-                          💬 Squad Chat
-                        </button>
-                      )}
-                      <button onClick={() => cancelBooking(b.BookingID)} className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-400 text-sm font-medium hover:bg-rose-500/10 transition-all">Cancel Booking</button>
-                    </>
-                  )}
-                  {b.PaymentStatus === 'PAID' && (
-                    <div className="w-full py-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold text-center border border-emerald-500/20">PAYMENT SECURED</div>
-                  )}
-                </div>
-              </div>
+            {/* Kinetic Filter Bar */}
+            <div className="flex gap-2 mb-6">
+              {['UPCOMING', 'COMPLETED', 'CANCELLED'].map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => setBookingFilter(filter)}
+                  className={`px-6 py-2 font-black font-space uppercase text-sm border-2 transition-colors ${
+                    bookingFilter === filter
+                      ? 'bg-amber-500 border-amber-500 text-black'
+                      : 'border-white/20 text-white hover:border-amber-500/50 hover:text-amber-400'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+
+            {myBookings
+              .filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+              })
+              .map(b => (
+              <BookingPoster 
+                key={b.BookingID} 
+                booking={b} 
+                onCancel={cancelBooking} 
+                onChat={() => openChatSidebar(null, b.TurfName + ' Squad', 'SQUAD', 'B_' + b.BookingID)} 
+                onToggleVisibility={toggleVisibility}
+                roleColor="amber" 
+              />
             ))}
-            {myBookings.length === 0 && <p className="text-slate-500 text-center py-12">No squad bookings found.</p>}
+            {myBookings.filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+            }).length === 0 && <EmptyBookings />}
           </div>
         )}
 

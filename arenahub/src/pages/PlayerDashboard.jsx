@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ChatWidget from '../components/ChatWidget';
 import TurfDetailModal from '../components/TurfDetailModal';
 import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
+import GameCard from '../components/GameCard';
+import BookingPoster, { EmptyBookings } from '../components/BookingPoster';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -35,6 +36,7 @@ const PlayerDashboard = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [toppingUp, setToppingUp] = useState(false);
   const [activeTab, setActiveTab] = useState('turfs');
+  const [bookingFilter, setBookingFilter] = useState('UPCOMING');
   const location = useLocation();
 
   useEffect(() => {
@@ -61,13 +63,10 @@ const PlayerDashboard = () => {
   const [reviewText, setReviewText] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Chat System (squad chat only — direct messages use global ChatSidebar)
-  const [activeChatBookingId, setActiveChatBookingId] = useState(null);
-
   // Helper to open the global chat sidebar for direct messages
-  const openChatSidebar = (contactUserId, contactName, contactRole) => {
+  const openChatSidebar = (contactUserId, contactName, contactRole, contactId = null) => {
     window.dispatchEvent(new CustomEvent('open-chat-sidebar', {
-      detail: { contactUserId, contactName, contactRole }
+      detail: { contactId, contactUserId, contactName, contactRole }
     }));
   };
 
@@ -96,7 +95,7 @@ const PlayerDashboard = () => {
 
   const fetchPublicGames = async () => {
     try {
-      const res = await fetch(`${API}/api/bookings?publicGames=true`, { headers });
+      const res = await fetch(`${API}/api/bookings?publicGames=true&userId=${userId}`, { headers });
       if (res.ok) setPublicGames(await res.json());
     } catch (err) { console.error(err); }
   };
@@ -196,6 +195,21 @@ const PlayerDashboard = () => {
     } catch (err) { console.error(err); }
   };
 
+  // ── Leave public game ──
+  const leaveGame = async (bookingId) => {
+    try {
+      const res = await fetch(`${API}/api/squad/leave`, {
+        method: 'DELETE', headers,
+        body: JSON.stringify({ bookingId, userId: parseInt(userId) })
+      });
+      const data = await res.json();
+      if (res.ok) { 
+        fetchPublicGames(); 
+      }
+      else alert(data.error);
+    } catch (err) { console.error(err); }
+  };
+
   // ── Top up wallet ──
   const topUpWallet = async (amount) => {
     setToppingUp(true);
@@ -281,18 +295,7 @@ const PlayerDashboard = () => {
         </div>
       )}
 
-      {/* Squad Chat Widget (booking-based group chat only) */}
-      {activeChatBookingId && (
-        <ChatWidget 
-          currentUserId={userId} 
-          bookingId={activeChatBookingId} 
-          onClose={() => setActiveChatBookingId(null)} 
-          title="Squad Chat"
-        />
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <p className="sports-kicker mb-1">Home pitch</p>
@@ -467,44 +470,14 @@ const PlayerDashboard = () => {
           <div className="animate-fade-in-up">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {publicGames.map(game => (
-                <div key={game.BookingID} className="glass rounded-2xl p-5 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{game.TurfName}</h3>
-                      <p className="text-sm text-slate-400">Hosted by <span className="text-emerald-400">{game.HostName}</span></p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">{game.SportType}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-slate-300 mb-4">
-                    <span className="flex items-center gap-1">📅 {game.BookingDate}</span>
-                    <span className="flex items-center gap-1">🕐 {game.StartTime?.substring(0,5)} — {game.EndTime?.substring(0,5)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                          {Array.from({ length: Math.min(game.CurrentPlayers, 4) }).map((_, i) => (
-                            <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 border-2 border-arena-900 flex items-center justify-center text-[10px] text-white font-bold">P</div>
-                          ))}
-                        </div>
-                        <span className="text-xs text-slate-400">{game.CurrentPlayers}/{game.MaxPlayers} players</span>
-                      </div>
-                      <div className="w-32 h-1.5 bg-white/10 rounded-full mt-1.5 overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${(game.CurrentPlayers / game.MaxPlayers) * 100}%` }} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openChatSidebar(game.HostUserID, game.HostName, 'Captain')}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all flex items-center gap-1.5">
-                        💬 Chat Captain
-                      </button>
-                      <button onClick={() => joinGame(game.BookingID)}
-                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500 transition-all">
-                        Join Game
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <GameCard 
+                  key={game.BookingID} 
+                  game={game} 
+                  isJoined={game.HasJoined} 
+                  onJoin={joinGame} 
+                  onLeave={leaveGame} 
+                  onChat={() => openChatSidebar(null, game.TurfName + ' Squad', 'SQUAD', 'B_' + game.BookingID)} 
+                />
               ))}
               {publicGames.length === 0 && (
                 <p className="text-slate-500 col-span-full text-center py-12">No public games available right now. Check back soon!</p>
@@ -516,35 +489,45 @@ const PlayerDashboard = () => {
         {/* ═══ TAB: My Bookings ═══ */}
         {activeTab === 'bookings' && (
           <div className="animate-fade-in-up space-y-3">
-            {myBookings.map(b => (
-              <div key={b.BookingID} className="glass rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-white font-semibold">{b.TurfName}</h3>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${b.Status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>{b.Status}</span>
-                    {b.PaymentStatus === 'PAID' && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400">PAID</span>}
-                  </div>
-                  <p className="text-sm text-slate-400">📅 {b.BookingDate} &nbsp; 🕐 {b.StartTime?.substring(0,5)} — {b.EndTime?.substring(0,5)}</p>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  {b.Status === 'CONFIRMED' && !isPastBooking(b) && (
-                    <button onClick={() => cancelBooking(b.BookingID)} className="px-4 py-2 rounded-lg border border-rose-500/30 text-rose-400 text-sm hover:bg-rose-500/10 transition-all">Cancel</button>
-                  )}
-                  {b.Visibility === 'PUBLIC' && !isPastBooking(b) && b.Status === 'CONFIRMED' && (
-                    <button onClick={() => setActiveChatBookingId(b.BookingID)} className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all flex items-center gap-1.5">
-                      💬 Squad Chat
-                    </button>
-                  )}
-                  {b.Status === 'CONFIRMED' && isPastBooking(b) && (
-                    <button onClick={() => { setReviewingBooking(b); setReviewRating(0); setReviewText(''); }}
-                      className="px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition-all">
-                      ⭐ Leave Review
-                    </button>
-                  )}
-                </div>
-              </div>
+            {/* Kinetic Filter Bar */}
+            <div className="flex gap-2 mb-6">
+              {['UPCOMING', 'COMPLETED', 'CANCELLED'].map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => setBookingFilter(filter)}
+                  className={`px-6 py-2 font-black font-space uppercase text-sm border-2 transition-colors ${
+                    bookingFilter === filter
+                      ? 'bg-emerald-500 border-emerald-500 text-black'
+                      : 'border-white/20 text-white hover:border-emerald-500/50 hover:text-emerald-400'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+
+            {myBookings
+              .filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+              })
+              .map(b => (
+              <BookingPoster 
+                key={b.BookingID} 
+                booking={b} 
+                onCancel={cancelBooking} 
+                onChat={() => openChatSidebar(null, b.TurfName + ' Squad', 'SQUAD', 'B_' + b.BookingID)} 
+                roleColor="emerald" 
+              />
             ))}
-            {myBookings.length === 0 && <p className="text-slate-500 text-center py-12">No bookings yet. Browse turfs to get started!</p>}
+            {myBookings.filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+            }).length === 0 && <EmptyBookings />}
           </div>
         )}
 

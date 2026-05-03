@@ -11,7 +11,7 @@ import io.jsonwebtoken.security.Keys;
 
 public class JwtUtil {
     // A strong static secret key (at least 32 bytes)
-    private static final String SECRET_STRING = "dummypasswordwith32characters";
+    private static final String SECRET_STRING = "";
     private static final Key SECRET_KEY = Keys.hmacShaKeyFor(SECRET_STRING.getBytes(StandardCharsets.UTF_8));
     private static final long EXPIRATION_TIME_MS = 24 * 60 * 60 * 1000; // 24 hours
 

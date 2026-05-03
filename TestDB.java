@@ -7,7 +7,7 @@ public class TestDB {
     public static void main(String[] args) {
         String url = "jdbc:mysql://localhost:3306/ArenaHub";
         String user = "root";
-        String password = "pass";
+        String password = "liomessi10";
         try (Connection conn = DriverManager.getConnection(url, user, password);
              Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("SELECT ImageURL FROM TurfImages");
