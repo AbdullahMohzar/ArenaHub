@@ -132,8 +132,22 @@ const PlayerDashboard = () => {
     return s >= bookingForm.startTime && e <= bookingForm.endTime;
   };
 
+  // Check if slot time has already passed (only for today)
+  const isPastTime = (hour) => {
+    if (!bookingForm.bookingDate) return false;
+    const selectedDate = new Date(bookingForm.bookingDate).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Only check if booking date is today
+    if (selectedDate !== today) return false;
+    
+    // Compare hour with current hour
+    const currentHour = new Date().getHours();
+    return hour < currentHour;
+  };
+
   const handleSlotClick = (hour) => {
-    if (isSlotOccupied(hour)) return;
+    if (isSlotOccupied(hour) || isPastTime(hour)) return;
     const cs = `${String(hour).padStart(2, '0')}:00`, ce = `${String(hour + 1).padStart(2, '0')}:00`;
     if (!bookingForm.startTime || bookingForm.endTime) {
       setBookingForm(p => ({ ...p, startTime: cs, endTime: ce }));
@@ -412,10 +426,10 @@ const PlayerDashboard = () => {
                             <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">{loadingSlots ? 'Loading...' : 'Select Time'}</p>
                             <div className="grid grid-cols-6 gap-1.5">
                               {HOURS.map(h => {
-                                const occ = isSlotOccupied(h), sel = isSlotSelected(h);
+                                const occ = isSlotOccupied(h), sel = isSlotSelected(h), past = isPastTime(h);
                                 return (
                                   <button key={h} onClick={() => handleSlotClick(h)}
-                                    className={`py-1.5 rounded text-xs font-semibold transition-all ${occ ? 'bg-rose-500/20 text-rose-400 cursor-not-allowed opacity-60' : sel ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>
+                                    className={`py-1.5 rounded text-xs font-semibold transition-all ${past ? 'bg-red-500/20 text-red-400 cursor-not-allowed opacity-60' : occ ? 'bg-rose-500/20 text-rose-400 cursor-not-allowed opacity-60' : sel ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>
                                     {String(h).padStart(2, '0')}
                                   </button>
                                 );
@@ -423,6 +437,7 @@ const PlayerDashboard = () => {
                             </div>
                             <div className="flex gap-3 mt-2 text-xs text-slate-500">
                               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/10" />Free</span>
+                              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500/50" />Past Time</span>
                               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500/50" />Busy</span>
                               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />Selected</span>
                             </div>
