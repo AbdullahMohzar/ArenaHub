@@ -27,12 +27,19 @@ const ChatSidebar = () => {
 
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
-  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const getHeaders = () => {
+    const token = localStorage.getItem('token');
+    return { 
+      'Authorization': `Bearer ${token}`, 
+      'Content-Type': 'application/json' 
+    };
+  };
 
   // ── Fetch contacts list ──
   const fetchContacts = async () => {
     try {
-      const res = await fetch(`${API}/api/chat/contacts`, { headers });
+      const res = await fetch(`${API}/api/chat/contacts`, { headers: getHeaders() });
       if (res.ok) {
         const data = await res.json();
         // data contains objects with id, name, role, lastMessage, unreadCount, etc.
@@ -45,7 +52,7 @@ const ChatSidebar = () => {
   // ── Fetch messages for active contact ──
   const fetchMessages = async (contactId) => {
     try {
-      const res = await fetch(`${API}/api/chat/messages?contactId=${contactId}`, { headers });
+      const res = await fetch(`${API}/api/chat/messages?contactId=${contactId}`, { headers: getHeaders() });
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
@@ -56,7 +63,10 @@ const ChatSidebar = () => {
   // ── Mark messages as read ──
   const markAsRead = async (contactId) => {
     try {
-      await fetch(`${API}/api/chat/read?contactId=${contactId}`, { method: 'PUT', headers });
+      await fetch(`${API}/api/chat/read?contactId=${contactId}`, { 
+        method: 'PUT', 
+        headers: getHeaders() 
+      });
     } catch (err) { console.error('Error marking as read:', err); }
   };
 
@@ -66,7 +76,8 @@ const ChatSidebar = () => {
     if (!newMessage.trim() || !activeContact) return;
     try {
       const res = await fetch(`${API}/api/chat/send`, {
-        method: 'POST', headers,
+        method: 'POST', 
+        headers: getHeaders(),
         body: JSON.stringify({ contactId: activeContact.id, content: newMessage })
       });
       if (res.ok) {

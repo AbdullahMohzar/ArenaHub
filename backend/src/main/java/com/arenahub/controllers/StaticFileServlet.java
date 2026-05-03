@@ -83,9 +83,22 @@ public class StaticFileServlet extends HttpServlet {
 
         File file = new File(getBaseDir(), pathInfo);
         if (!file.exists() || file.isDirectory()) {
-            System.err.println("StaticFileServlet: File not found: " + file.getAbsolutePath());
-            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return;
+            // Fallback: Check inside webapp /uploads if not found in baseDir
+            String realPath = getServletContext().getRealPath("/uploads");
+            if (realPath != null) {
+                File fallbackFile = new File(realPath, pathInfo);
+                if (fallbackFile.exists() && !fallbackFile.isDirectory()) {
+                    file = fallbackFile;
+                } else {
+                    System.err.println("StaticFileServlet: File not found in any location: " + pathInfo);
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
+            } else {
+                System.err.println("StaticFileServlet: File not found: " + file.getAbsolutePath());
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
         }
 
         // Set content type
