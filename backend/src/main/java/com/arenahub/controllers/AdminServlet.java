@@ -103,21 +103,38 @@ public class AdminServlet extends HttpServlet {
                 BufferedReader reader = req.getReader();
                 JsonObject json = new Gson().fromJson(reader, JsonObject.class);
                 int targetUserId = json.get("userId").getAsInt();
-                String action = json.get("action").getAsString();
+                String action = json.get("action").getAsString().trim().toUpperCase();
 
                 try (Connection conn = DatabaseConnection.getConnection()) {
+                    int updatedRows = 0;
                     if ("BAN".equals(action)) {
                         String sql = "UPDATE Users SET Status = 'BANNED' WHERE UserID = ?";
                         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                             stmt.setInt(1, targetUserId);
-                            stmt.executeUpdate();
+                            updatedRows = stmt.executeUpdate();
+                        }
+                    } else if ("UNBAN".equals(action)) {
+                        String sql = "UPDATE Users SET Status = 'ACTIVE' WHERE UserID = ?";
+                        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                            stmt.setInt(1, targetUserId);
+                            updatedRows = stmt.executeUpdate();
                         }
                     } else if ("PROMOTE_OWNER".equals(action)) {
                         String sql = "UPDATE Users SET UserRole = 'Owner' WHERE UserID = ?";
                         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                             stmt.setInt(1, targetUserId);
-                            stmt.executeUpdate();
+                            updatedRows = stmt.executeUpdate();
                         }
+                    } else {
+                        resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        resp.getWriter().write("{\"error\":\"Unsupported admin action\"}");
+                        return;
+                    }
+
+                    if (updatedRows == 0) {
+                        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        resp.getWriter().write("{\"error\":\"User not found\"}");
+                        return;
                     }
                     resp.setStatus(HttpServletResponse.SC_OK);
                     resp.getWriter().write("{\"message\":\"User updated successfully!\"}");

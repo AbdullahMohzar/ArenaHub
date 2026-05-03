@@ -47,7 +47,12 @@ const AdminDashboard = () => {
         method: 'PUT', headers,
         body: JSON.stringify({ userId, action })
       });
-      if (res.ok) fetchUsers();
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await fetchUsers();
+      } else {
+        alert(data.error || 'Unable to update user');
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -106,26 +111,35 @@ const AdminDashboard = () => {
                   <tbody className="divide-y divide-white/10">
                     {users.map(u => (
                       <tr key={u.userId} className="hover:bg-white/5 transition-colors">
+                        {(() => {
+                          const status = (u.status || 'ACTIVE').toUpperCase();
+                          const role = (u.role || '').toUpperCase();
+                          return null;
+                        })()}
                         <td className="px-6 py-4">
                           <div className="font-bold text-white">{u.name}</div>
                           <div className="text-xs text-slate-500">{u.email}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.role === 'Admin' ? 'bg-rose-500/10 text-rose-400' : u.role === 'Owner' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-700 text-slate-300'}`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${(u.role || '').toUpperCase() === 'ADMIN' ? 'bg-rose-500/10 text-rose-400' : (u.role || '').toUpperCase() === 'OWNER' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-700 text-slate-300'}`}>
                             {u.role}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${u.status === 'BANNED' ? 'bg-rose-500 text-white' : 'text-emerald-400'}`}>
-                            {u.status || 'ACTIVE'}
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${(u.status || 'ACTIVE').toUpperCase() === 'BANNED' ? 'bg-rose-500 text-white' : 'text-emerald-400'}`}>
+                            {(u.status || 'ACTIVE').toUpperCase()}
                           </span>
                         </td>
                         <td className="px-6 py-4">{u.createdAt?.substring(0, 10)}</td>
                         <td className="px-6 py-4 text-right space-x-2">
-                          {u.status !== 'BANNED' && u.role !== 'Admin' && (
-                            <button onClick={() => handleUserAction(u.userId, 'BAN')} className="px-3 py-1.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold">Ban User</button>
+                          {((u.role || '').toUpperCase() !== 'ADMIN') && (
+                            ((u.status || 'ACTIVE').toUpperCase() === 'BANNED') ? (
+                              <button onClick={() => handleUserAction(u.userId, 'UNBAN')} className="px-3 py-1.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 text-xs font-bold">Unban User</button>
+                            ) : (
+                              <button onClick={() => handleUserAction(u.userId, 'BAN')} className="px-3 py-1.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold">Ban User</button>
+                            )
                           )}
-                          {u.role === 'Player' && (
+                          {(u.role || '').toUpperCase() === 'PLAYER' && (
                             <button onClick={() => handleUserAction(u.userId, 'PROMOTE_OWNER')} className="px-3 py-1.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 text-xs font-bold">Make Owner</button>
                           )}
                         </td>

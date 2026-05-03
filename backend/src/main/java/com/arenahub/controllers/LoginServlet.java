@@ -59,16 +59,18 @@ public class LoginServlet extends HttpServlet {
             boolean isValidUser = false;
             String role = null;
             int userId = -1;
+            String status = null;
             try (Connection conn = DatabaseConnection.getConnection()) {
-                String sql = "SELECT UserID, PasswordHash, UserRole FROM Users WHERE Email = ?";
+                String sql = "SELECT UserID, PasswordHash, UserRole, Status FROM Users WHERE Email = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setString(1, email);
                     try (ResultSet rs = stmt.executeQuery()) {
                         if (rs.next()) {
                             String storedHash = rs.getString("PasswordHash");
+                            status = rs.getString("Status");
                             
                             // Verify the hashed password
-                            if (org.mindrot.jbcrypt.BCrypt.checkpw(password, storedHash)) {
+                            if (org.mindrot.jbcrypt.BCrypt.checkpw(password, storedHash) && (status == null || !"BANNED".equalsIgnoreCase(status))) {
                                 isValidUser = true;
                                 role = rs.getString("UserRole");
                                 userId = rs.getInt("UserID");
@@ -88,8 +90,13 @@ public class LoginServlet extends HttpServlet {
                 jsonResponse.addProperty("role", role);
                 jsonResponse.addProperty("userId", userId);
             } else {
-                resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                jsonResponse.addProperty("error", "Invalid email or password");
+                if (status != null && "BANNED".equalsIgnoreCase(status)) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    jsonResponse.addProperty("error", "Your account is banned. Please contact support.");
+                } else {
+                    resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    jsonResponse.addProperty("error", "Invalid email or password");
+                }
             }
             resp.getWriter().write(jsonResponse.toString());
 
