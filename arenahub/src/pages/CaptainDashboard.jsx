@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import TurfDetailModal from '../components/TurfDetailModal';
 import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
 import BookingPoster, { EmptyBookings } from '../components/BookingPoster';
+import BroadcastLayout from '../components/BroadcastLayout';
+import FootballSpinner from '../components/FootballSpinner';
+import ScoreboardNumber from '../components/ScoreboardNumber';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -240,17 +243,17 @@ const CaptainDashboard = () => {
   const sportTypes = ['All', ...new Set(turfs.map(t => t.SportType).filter(Boolean))];
 
   return (
-    <div className="min-h-screen bg-arena-950">
+    <div className="min-h-screen bg-arena-950 pitch-tactical-grid">
       {/* Payment Overlay */}
       {processingPayment && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center z-50">
-          <div className="w-14 h-14 border-4 border-white/20 border-t-amber-400 rounded-full animate-spin" />
+          <FootballSpinner loading={processingPayment} label="Processing squad payment" size={34} />
           <p className="text-white text-lg font-semibold mt-5">Processing Squad Payment...</p>
           <p className="text-slate-400 text-sm mt-1">Please wait while we secure your slot</p>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
+      <BroadcastLayout className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <p className="sports-kicker mb-1">Sideline</p>
@@ -258,20 +261,27 @@ const CaptainDashboard = () => {
             <p className="text-slate-400 mt-2 text-sm max-w-lg">Call the plays — lock slots, go public for pickups, stack gear for the squad.</p>
           </div>
           {/* Wallet Card */}
-          <div className="glass rounded-2xl px-6 py-4 flex items-center gap-4">
+          <div className="glass px-6 py-4 flex items-center gap-4 border-2 border-amber-500/20">
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wider">Wallet Balance</p>
-              <p className="text-2xl font-bold text-amber-400">Rs. {wallet.balance?.toLocaleString('en-IN') || 0}</p>
+              <div className="mt-1 flex items-center gap-2 text-2xl font-bold text-amber-400">
+                <span>Rs.</span>
+                <ScoreboardNumber
+                  value={wallet.balance || 0}
+                  formatter={(num) => Number(num || 0).toLocaleString('en-IN')}
+                  className="text-amber-300"
+                />
+              </div>
             </div>
             <button onClick={() => topUpWallet(1000)} disabled={toppingUp}
-              className="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-400 text-sm font-semibold border border-amber-500/30 hover:bg-amber-500/30 disabled:opacity-50 transition-all">
+              className="px-4 py-2 bg-amber-500/20 text-amber-400 text-sm font-semibold border-2 border-amber-500/30 hover:bg-amber-500/30 disabled:opacity-50 transition-all">
               {toppingUp ? '...' : '+ Rs. 1,000'}
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
+        <div className="flex flex-wrap gap-1 p-1.5 glass mb-6 w-fit ring-1 ring-white/5 border-2 border-white/10">
           <button onClick={() => setActiveTab('book')}
             className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'book' ? 'bg-amber-500/15 text-amber-300 border-amber-400 shadow-[0_0_20px_-8px_rgba(251,191,36,0.45)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
             🛡️ Book & Manage
@@ -339,7 +349,11 @@ const CaptainDashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-amber-400">Rs. {turf.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                        <div className="text-xl font-bold text-amber-400 flex items-center justify-end gap-1">
+                          <span>Rs.</span>
+                          <ScoreboardNumber value={turf.PricePerHour} className="text-amber-300" />
+                          <span className="text-sm text-slate-500">/hr</span>
+                        </div>
                         <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold border border-indigo-500/30 hover:bg-indigo-500/30 transition-all">
                           💬 Contact Owner
                         </button>
@@ -442,7 +456,14 @@ const CaptainDashboard = () => {
                           <button onClick={() => submitBooking(turf.TurfID)} disabled={!bookingForm.startTime}
                             className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold disabled:opacity-40 shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition-all flex items-center justify-between px-6">
                             <span>Checkout</span>
-                            <span>Rs. {calculateTotal(turf.PricePerHour).toLocaleString('en-IN')}</span>
+                            <span className="inline-flex items-center gap-1">
+                              <span>Rs.</span>
+                              <ScoreboardNumber
+                                value={calculateTotal(turf.PricePerHour)}
+                                formatter={(num) => Number(num || 0).toLocaleString('en-IN')}
+                                className="text-amber-100 border-white/30"
+                              />
+                            </span>
                           </button>
                           <button onClick={() => setBookingForm({ turfId: null, bookingDate: '', startTime: '', endTime: '', visibility: 'PRIVATE', maxPlayers: 10, isRecurring: false, selectedEquipment: [] })}
                             className="px-6 py-3 rounded-xl border border-white/10 text-slate-400 hover:bg-white/5 font-medium transition-all">Cancel</button>
@@ -567,7 +588,7 @@ const CaptainDashboard = () => {
             </div>
           </div>
         )}
-      </div>
+      </BroadcastLayout>
     </div>
   );
 };

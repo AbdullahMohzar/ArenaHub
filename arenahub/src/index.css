@@ -93,6 +93,38 @@
   );
 }
 
+.pitch-tactical-grid {
+  position: relative;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 72px,
+      rgba(255, 255, 255, 0.04) 72px,
+      rgba(255, 255, 255, 0.04) 74px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 72px,
+      rgba(255, 255, 255, 0.04) 72px,
+      rgba(255, 255, 255, 0.04) 74px
+    ),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: auto, auto, 22px 22px;
+  background-position: center;
+}
+
+.pitch-tactical-grid::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-top: 2px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  mix-blend-mode: screen;
+}
+
 /* ═══════════════════════════════════════════════════
    Base — night stadium atmosphere
    ═══════════════════════════════════════════════════ */

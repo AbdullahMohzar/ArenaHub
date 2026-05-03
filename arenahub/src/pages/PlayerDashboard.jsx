@@ -4,6 +4,9 @@ import TurfDetailModal from '../components/TurfDetailModal';
 import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
 import GameCard from '../components/GameCard';
 import BookingPoster, { EmptyBookings } from '../components/BookingPoster';
+import BroadcastLayout from '../components/BroadcastLayout';
+import FootballSpinner from '../components/FootballSpinner';
+import ScoreboardNumber from '../components/ScoreboardNumber';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -272,11 +275,11 @@ const PlayerDashboard = () => {
   const sportTypes = ['All', ...new Set(turfs.map(t => t.SportType).filter(Boolean))];
 
   return (
-    <div className="min-h-screen bg-arena-950">
+    <div className="min-h-screen bg-arena-950 pitch-tactical-grid">
       {/* Payment Overlay */}
       {processingPayment && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center z-50">
-          <div className="w-14 h-14 border-4 border-white/20 border-t-emerald-400 rounded-full animate-spin" />
+          <FootballSpinner loading={processingPayment} label="Processing payment" size={34} />
           <p className="text-white text-lg font-semibold mt-5">Processing Payment...</p>
           <p className="text-slate-400 text-sm mt-1">Please do not close this window</p>
         </div>
@@ -309,7 +312,7 @@ const PlayerDashboard = () => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
+      <BroadcastLayout className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <p className="sports-kicker mb-1">Home pitch</p>
@@ -317,20 +320,27 @@ const PlayerDashboard = () => {
             <p className="text-slate-400 mt-2 text-sm max-w-lg">Hunt venues, jump into public runs, and keep every booking in your highlight reel.</p>
           </div>
           {/* Wallet Card */}
-          <div className="glass rounded-2xl px-6 py-4 flex items-center gap-4">
+          <div className="glass px-6 py-4 flex items-center gap-4 border-2 border-emerald-500/20">
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wider">Wallet Balance</p>
-              <p className="text-2xl font-bold text-emerald-400">Rs. {wallet.balance?.toLocaleString('en-IN') || 0}</p>
+              <div className="mt-1 flex items-center gap-2 text-2xl font-bold text-emerald-400">
+                <span>Rs.</span>
+                <ScoreboardNumber
+                  value={wallet.balance || 0}
+                  formatter={(num) => Number(num || 0).toLocaleString('en-IN')}
+                  className="text-emerald-300"
+                />
+              </div>
             </div>
             <button onClick={() => topUpWallet(1000)} disabled={toppingUp}
-              className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm font-semibold border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-50 transition-all">
+              className="px-4 py-2 bg-emerald-500/20 text-emerald-400 text-sm font-semibold border-2 border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-50 transition-all">
               {toppingUp ? '...' : '+ Rs. 1,000'}
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
+        <div className="flex flex-wrap gap-1 p-1.5 glass mb-6 w-fit ring-1 ring-white/5 border-2 border-white/10">
           {[
             { key: 'turfs', label: '🏟️ Browse Turfs', },
             { key: 'games', label: '⚽ Public Games', },
@@ -594,7 +604,7 @@ const PlayerDashboard = () => {
             </div>
           </div>
         )}
-      </div>
+      </BroadcastLayout>
     </div>
   );
 };

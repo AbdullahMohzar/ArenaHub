@@ -1,5 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import ScoreboardNumber from './ScoreboardNumber';
+
+const BorderFootball = () => (
+  <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true">
+    <ellipse cx="32" cy="32" rx="24" ry="16" fill="#34f5b3" />
+    <path d="M16 32c6-7 26-7 32 0-6 7-26 7-32 0Z" fill="#0b0f0d" />
+    <path d="M24 28h16v8H24z" fill="#f8fafc" />
+    <path d="M26 28v8M30 28v8M34 28v8M38 28v8" stroke="#0b0f0d" strokeWidth="1.8" />
+  </svg>
+);
 
 const BookingPoster = ({ booking, onCancel, onChat, onToggleVisibility, roleColor = 'emerald' }) => {
   // Parse date
@@ -64,11 +74,31 @@ const BookingPoster = ({ booking, onCancel, onChat, onToggleVisibility, roleColo
         </div>
       </div>
 
+      <motion.div
+        className="pointer-events-none absolute bottom-[-10px] left-0 z-20"
+        variants={{
+          rest: { x: '-12%', rotate: 0, opacity: 0 },
+          hover: {
+            x: '118%',
+            rotate: 540,
+            opacity: [0, 1, 1, 0],
+            transition: { duration: 0.95, ease: 'linear' }
+          }
+        }}
+      >
+        <BorderFootball />
+      </motion.div>
+
       {/* Unmasked Hover Section (Bottom) */}
       <div className="absolute bottom-0 left-0 right-0 h-[80px] bg-black border-t-2 border-white/20 flex items-center justify-between px-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]">
         <div className="flex items-center gap-4">
           <div className="text-sm font-mono text-slate-400 uppercase">
-            Squad: <span className="text-white font-bold">{booking.CurrentPlayers}/{booking.MaxPlayers}</span>
+            Squad:
+            <span className="ml-2 text-white font-bold">
+              <ScoreboardNumber value={booking.CurrentPlayers} className="text-white" />
+              <span className="mx-1">/</span>
+              <ScoreboardNumber value={booking.MaxPlayers} className="text-white" />
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-3">

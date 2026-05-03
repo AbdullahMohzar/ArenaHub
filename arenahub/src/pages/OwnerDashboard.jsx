@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
+import BroadcastLayout from '../components/BroadcastLayout';
+import ScoreboardNumber from '../components/ScoreboardNumber';
 
 const API = 'http://localhost:8080';
 
@@ -350,7 +352,7 @@ const OwnerDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-zinc-950 pitch-tactical-grid">
       {/* Toast Overlay */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map(t => (
@@ -360,7 +362,7 @@ const OwnerDashboard = () => {
         ))}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <BroadcastLayout className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-end gap-8 mb-12">
           <div>
             <p className="sports-kicker mb-2">Facility ops</p>
@@ -371,7 +373,14 @@ const OwnerDashboard = () => {
           </div>
           <div className="brutal-card p-6 min-w-[240px] border-accent/40">
             <span className="text-[10px] font-display text-slate-500 uppercase tracking-[0.2em] mb-2 block">This month gate</span>
-            <span className="text-4xl font-display text-accent tracking-wide">Rs. {monthlyRevenue.toLocaleString('en-IN')}</span>
+            <span className="text-4xl font-display text-accent tracking-wide inline-flex items-center gap-2">
+              <span>Rs.</span>
+              <ScoreboardNumber
+                value={monthlyRevenue}
+                formatter={(num) => Number(num || 0).toLocaleString('en-IN')}
+                className="text-accent border-accent/30"
+              />
+            </span>
           </div>
         </div>
 
@@ -457,7 +466,11 @@ const OwnerDashboard = () => {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xl font-bold text-emerald-400">Rs. {t.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                        <div className="text-xl font-bold text-emerald-400 inline-flex items-center gap-1">
+                          <span>Rs.</span>
+                          <ScoreboardNumber value={t.PricePerHour} className="text-emerald-300" />
+                          <span className="text-sm text-slate-500">/hr</span>
+                        </div>
                       </div>
                     </div>
 
@@ -725,7 +738,7 @@ const OwnerDashboard = () => {
           </div>
         )}
 
-      </div>
+      </BroadcastLayout>
     </div>
   );
 };
