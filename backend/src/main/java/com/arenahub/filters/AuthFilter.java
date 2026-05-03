@@ -1,6 +1,10 @@
 package com.arenahub.filters;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -11,6 +15,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.arenahub.utils.DatabaseConnection;
 import com.arenahub.utils.JwtUtil;
 
 import io.jsonwebtoken.Claims;
@@ -70,6 +75,25 @@ public class AuthFilter implements Filter {
             Claims claims = JwtUtil.validateToken(token);
             req.setAttribute("validatedUserId", claims.getSubject());
             req.setAttribute("validatedUserRole", claims.get("role"));
+
+            String userId = claims.getSubject();
+            try (Connection conn = DatabaseConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement("SELECT Status FROM Users WHERE UserID = ?")) {
+                stmt.setInt(1, Integer.parseInt(userId));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next() && "BANNED".equalsIgnoreCase(rs.getString("Status"))) {
+                        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        resp.setContentType("application/json");
+                        resp.getWriter().write("{\"error\":\"Your account is banned. Please contact support.\"}");
+                        return;
+                    }
+                }
+            } catch (SQLException | NumberFormatException ex) {
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                resp.setContentType("application/json");
+                resp.getWriter().write("{\"error\":\"Unable to validate account status\"}");
+                return;
+            }
             
             chain.doFilter(request, response);
         } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
