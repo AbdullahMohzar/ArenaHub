@@ -40,50 +40,50 @@ public class AdminServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
 
         String path = req.getPathInfo();
+        if (path == null) path = "";
+
         try (Connection conn = DatabaseConnection.getConnection()) {
-            switch (path) {
-                case "/users" -> {
-                    String sql = "SELECT UserID, FullName, Email, UserRole, Status, CreatedAt FROM Users ORDER BY CreatedAt DESC";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql);
-                         ResultSet rs = stmt.executeQuery()) {
-                        JsonArray arr = new JsonArray();
-                        while (rs.next()) {
-                            JsonObject u = new JsonObject();
-                            u.addProperty("userId", rs.getInt("UserID"));
-                            u.addProperty("name", rs.getString("FullName"));
-                            u.addProperty("email", rs.getString("Email"));
-                            u.addProperty("role", rs.getString("UserRole"));
-                            u.addProperty("status", rs.getString("Status"));
-                            u.addProperty("createdAt", rs.getString("CreatedAt"));
-                            arr.add(u);
-                        }
-                        resp.getWriter().write(arr.toString());
+            if ("/users".equals(path)) {
+                String sql = "SELECT UserID, FullName, Email, UserRole, Status, CreatedAt FROM Users ORDER BY CreatedAt DESC";
+                try (PreparedStatement stmt = conn.prepareStatement(sql);
+                     ResultSet rs = stmt.executeQuery()) {
+                    JsonArray arr = new JsonArray();
+                    while (rs.next()) {
+                        JsonObject u = new JsonObject();
+                        u.addProperty("userId", rs.getInt("UserID"));
+                        u.addProperty("name", rs.getString("FullName"));
+                        u.addProperty("email", rs.getString("Email"));
+                        u.addProperty("role", rs.getString("UserRole"));
+                        u.addProperty("status", rs.getString("Status"));
+                        u.addProperty("createdAt", rs.getString("CreatedAt"));
+                        arr.add(u);
                     }
+                    resp.getWriter().write(arr.toString());
                 }
-                case "/disputes" -> {
-                    String sql = "SELECT b.BookingID, b.UserID, b.BookingDate, b.Status, b.PaymentStatus, t.Name AS TurfName, t.PricePerHour, u.FullName " +
-                                 "FROM Bookings b " +
-                                 "JOIN Turfs t ON b.TurfID = t.TurfID " +
-                                 "JOIN Users u ON b.UserID = u.UserID " +
-                                 "WHERE b.Status = 'CANCELLED' AND b.PaymentStatus = 'PAID' " +
-                                 "ORDER BY b.BookingDate DESC";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql);
-                         ResultSet rs = stmt.executeQuery()) {
-                        JsonArray arr = new JsonArray();
-                        while (rs.next()) {
-                            JsonObject b = new JsonObject();
-                            b.addProperty("bookingId", rs.getInt("BookingID"));
-                            b.addProperty("userId", rs.getInt("UserID"));
-                            b.addProperty("userName", rs.getString("FullName"));
-                            b.addProperty("turfName", rs.getString("TurfName"));
-                            b.addProperty("date", rs.getString("BookingDate"));
-                            b.addProperty("price", rs.getDouble("PricePerHour"));
-                            arr.add(b);
-                        }
-                        resp.getWriter().write(arr.toString());
+            } else if ("/disputes".equals(path)) {
+                String sql = "SELECT b.BookingID, b.UserID, b.BookingDate, b.Status, b.PaymentStatus, t.Name AS TurfName, t.PricePerHour, u.FullName " +
+                             "FROM Bookings b " +
+                             "JOIN Turfs t ON b.TurfID = t.TurfID " +
+                             "JOIN Users u ON b.UserID = u.UserID " +
+                             "WHERE b.Status = 'CANCELLED' AND b.PaymentStatus = 'PAID' " +
+                             "ORDER BY b.BookingDate DESC";
+                try (PreparedStatement stmt = conn.prepareStatement(sql);
+                     ResultSet rs = stmt.executeQuery()) {
+                    JsonArray arr = new JsonArray();
+                    while (rs.next()) {
+                        JsonObject b = new JsonObject();
+                        b.addProperty("bookingId", rs.getInt("BookingID"));
+                        b.addProperty("userId", rs.getInt("UserID"));
+                        b.addProperty("userName", rs.getString("FullName"));
+                        b.addProperty("turfName", rs.getString("TurfName"));
+                        b.addProperty("date", rs.getString("BookingDate"));
+                        b.addProperty("price", rs.getDouble("PricePerHour"));
+                        arr.add(b);
                     }
+                    resp.getWriter().write(arr.toString());
                 }
-                default -> resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            } else {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
         } catch (SQLException e) {
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -103,7 +103,7 @@ public class AdminServlet extends HttpServlet {
                 BufferedReader reader = req.getReader();
                 JsonObject json = new Gson().fromJson(reader, JsonObject.class);
                 int targetUserId = json.get("userId").getAsInt();
-                String action = json.get("action").getAsString(); // BAN or PROMOTE_OWNER
+                String action = json.get("action").getAsString();
 
                 try (Connection conn = DatabaseConnection.getConnection()) {
                     if ("BAN".equals(action)) {
@@ -145,22 +145,20 @@ public class AdminServlet extends HttpServlet {
                 double amount = json.get("amount").getAsDouble();
 
                 try (Connection conn = DatabaseConnection.getConnection()) {
-                    conn.setAutoCommit(false); // Start transaction
+                    conn.setAutoCommit(false);
                     try {
-                        // 1. Mark booking as REFUNDED
                         String markSql = "UPDATE Bookings SET PaymentStatus = 'REFUNDED' WHERE BookingID = ?";
                         try (PreparedStatement stmt = conn.prepareStatement(markSql)) {
                             stmt.setInt(1, bookingId);
                             stmt.executeUpdate();
                         }
 
-                        // 2. Add to Wallet
                         String walletSql = "UPDATE Wallets SET Balance = Balance + ? WHERE UserID = ?";
                         try (PreparedStatement stmt = conn.prepareStatement(walletSql)) {
                             stmt.setDouble(1, amount);
                             stmt.setInt(2, targetUserId);
                             int rows = stmt.executeUpdate();
-                            if (rows == 0) { // If wallet doesn't exist, create it
+                            if (rows == 0) {
                                 String createWallet = "INSERT INTO Wallets (UserID, Balance) VALUES (?, ?)";
                                 try (PreparedStatement cStmt = conn.prepareStatement(createWallet)) {
                                     cStmt.setInt(1, targetUserId);
@@ -170,7 +168,6 @@ public class AdminServlet extends HttpServlet {
                             }
                         }
 
-                        // 3. Log Wallet Transaction for refund
                         String txnSql = "INSERT INTO WalletTransactions (WalletID, TransactionType, Amount, Description) " +
                                         "SELECT WalletID, 'REFUND', ?, ? FROM Wallets WHERE UserID = ?";
                         try (PreparedStatement txnStmt = conn.prepareStatement(txnSql)) {

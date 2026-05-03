@@ -92,11 +92,17 @@ public class StaticFileServlet extends HttpServlet {
         String mimeType = getServletContext().getMimeType(file.getName());
         if (mimeType == null) {
             String lower = file.getName().toLowerCase();
-            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) mimeType = "image/jpeg";
-            else if (lower.endsWith(".png")) mimeType = "image/png";
-            else if (lower.endsWith(".gif")) mimeType = "image/gif";
-            else if (lower.endsWith(".webp")) mimeType = "image/webp";
-            else mimeType = "application/octet-stream";
+            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+                mimeType = "image/jpeg";
+            } else if (lower.endsWith(".png")) {
+                mimeType = "image/png";
+            } else if (lower.endsWith(".gif")) {
+                mimeType = "image/gif";
+            } else if (lower.endsWith(".webp")) {
+                mimeType = "image/webp";
+            } else {
+                mimeType = "application/octet-stream";
+            }
         }
         
         resp.setContentType(mimeType);
