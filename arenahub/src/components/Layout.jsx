@@ -2,9 +2,21 @@ import React, { useEffect } from 'react';
 import Navbar from './Navbar';
 import ChatSidebar from './ChatSidebar';
 import { useLocation } from 'react-router-dom';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+import CursorFollower from './CursorFollower';
 
 const Layout = ({ children }) => {
   const location = useLocation();
+
+  useEffect(() => {
+    AOS.init({
+      duration: 800,
+      easing: 'ease-out-cubic',
+      once: true,
+      offset: 80,
+    });
+  }, []);
 
   useEffect(() => {
     // Only set role if we are logged in, otherwise default
@@ -16,18 +28,15 @@ const Layout = ({ children }) => {
     } else {
       document.documentElement.removeAttribute('data-role');
     }
+
+    document.documentElement.setAttribute('data-page', location.pathname === '/' ? 'home' : 'app');
+    AOS.refreshHard();
   }, [location.pathname]);
 
   return (
     <>
-      {/* Massive Decorative Background Number */}
-      <div className="fixed top-20 right-10 -z-10 pointer-events-none opacity-20 select-none hidden md:block">
-        <span className="text-[15rem] font-black leading-none text-zinc-800 tracking-tighter">
-          {location.pathname === '/dashboard' ? '01' : '0X'}
-        </span>
-      </div>
-
       <Navbar />
+      {location.pathname === '/' ? <CursorFollower /> : null}
       {/* The Kinetic Sidebar replaces the old ChatSidebar or works alongside it. 
           For now, we just include the old one, but we'll apply kinetic styles to it soon. */}
       <ChatSidebar />

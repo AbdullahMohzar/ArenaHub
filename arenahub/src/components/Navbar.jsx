@@ -1,54 +1,105 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import gsap from 'gsap';
 
-/* ─────────────────────────────────────────────
-   Role-based navigation configuration
-   ───────────────────────────────────────────── */
+/* ── Role-based nav config ───────────────────── */
 const NAV_CONFIG = {
   GUEST: [
-    { label: 'Browse Venues', path: '/venues', icon: '🏟️' },
+    { label: 'Why ArenaHub', path: '/#why' },
+    { label: 'Features',     path: '/#features' },
+    { label: 'Venues',       path: '/venues' },
+    { label: 'Contact',      path: '/#contact' },
   ],
-  PLAYER: [
-    { label: 'Dashboard', path: '/dashboard', icon: '📊' },
-  ],
-  CAPTAIN: [
-    { label: 'Dashboard', path: '/dashboard', icon: '🛡️' },
-  ],
-  OWNER: [
-    { label: 'Dashboard', path: '/dashboard', icon: '🏢' },
-  ],
-  ADMIN: [
-    { label: 'Dashboard', path: '/dashboard', icon: '⚙️' },
-  ],
+  PLAYER:  [{ label: 'Home', path: '/' }, { label: 'Dashboard', path: '/dashboard' }],
+  CAPTAIN: [{ label: 'Home', path: '/' }, { label: 'Dashboard', path: '/dashboard' }],
+  OWNER:   [{ label: 'Home', path: '/' }, { label: 'Dashboard', path: '/dashboard' }],
+  ADMIN:   [{ label: 'Home', path: '/' }, { label: 'Dashboard', path: '/dashboard' }],
 };
 
-const ROLE_BADGE = {
-  PLAYER: { label: 'Player', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-  CAPTAIN: { label: 'Captain', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
-  OWNER: { label: 'Owner', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
-  ADMIN: { label: 'Admin', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
-};
+/* ── ArenaHub logo mark ──────────────────────── */
+const Logo = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+    <rect x="1" y="1" width="24" height="24" rx="4" stroke="white" strokeWidth="1.5" strokeOpacity="0.7"/>
+    <path d="M6 19L13 7L20 19" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.9"/>
+    <path d="M8.5 14.5H17.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeOpacity="0.5"/>
+  </svg>
+);
 
 const Navbar = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState('GUEST');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const profileRef = useRef(null);
+  const navigate    = useNavigate();
+  const location    = useLocation();
+  const navRef      = useRef(null);
+  const profileRef  = useRef(null);
 
-  // Check auth state on mount and route changes
+  const [isLoggedIn,       setIsLoggedIn]       = useState(false);
+  const [userRole,         setUserRole]         = useState('GUEST');
+  const [isMobileOpen,     setIsMobileOpen]     = useState(false);
+  const [isProfileOpen,    setIsProfileOpen]    = useState(false);
+  const [isScrolled,       setIsScrolled]       = useState(false);
+  const [heroPassed,       setHeroPassed]       = useState(false);
+  const [unreadCount,      setUnreadCount]      = useState(0);
+
+  const isHome = location.pathname === '/';
+
+  /* ── Auth sync ────────────────────────────── */
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const role = localStorage.getItem('userRole');
+    const role  = localStorage.getItem('userRole');
     setIsLoggedIn(!!token);
     setUserRole(role ? role.toUpperCase() : 'GUEST');
   }, [location]);
 
-  // Poll for unread messages (for navbar badge)
+  /* ── Scroll detection ─────────────────────── */
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  /* ── Hero-passed detection ────────────────── */
+  useEffect(() => {
+    const sync = () => {
+      const v = document.documentElement.getAttribute('data-home-hero-passed');
+      setHeroPassed(v === 'true');
+    };
+    sync();
+    window.addEventListener('scroll', sync, { passive: true });
+    const t = setInterval(sync, 300);
+    return () => { window.removeEventListener('scroll', sync); clearInterval(t); };
+  }, []);
+
+  /* ── GSAP pill morph when pill state changes ── */
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el || !isHome) return;
+
+    if (heroPassed) {
+      // morph into centered pill
+      gsap.to(el, {
+        duration: 0.55,
+        ease: 'expo.out',
+        '--pill-padding': '0px 24px',
+        '--pill-radius': '999px',
+        '--pill-max-width': '820px',
+        '--pill-margin': '16px auto 0',
+        '--pill-border': '1px solid rgba(255,255,255,0.14)',
+        '--pill-shadow': '0 8px 40px rgba(0,0,0,0.55)',
+      });
+    } else {
+      gsap.to(el, {
+        duration: 0.55,
+        ease: 'expo.out',
+        '--pill-padding': '0px 0px',
+        '--pill-radius': '0px',
+        '--pill-max-width': '100%',
+        '--pill-margin': '0px auto 0',
+        '--pill-border': '1px solid transparent',
+        '--pill-shadow': 'none',
+      });
+    }
+  }, [heroPassed, isHome]);
+
+  /* ── Unread messages poll ─────────────────── */
   useEffect(() => {
     const fetchUnread = async () => {
       const t = localStorage.getItem('token');
@@ -56,35 +107,26 @@ const Navbar = () => {
       if (!t || r === 'ADMIN') return;
       try {
         const res = await fetch('http://localhost:8080/api/chat/contacts', {
-          headers: { 'Authorization': `Bearer ${t}` }
+          headers: { Authorization: `Bearer ${t}` },
         });
         if (res.ok) {
           const data = await res.json();
           setUnreadCount(data.reduce((sum, c) => sum + (c.unreadCount || 0), 0));
         }
-      } catch (err) { /* silent */ }
+      } catch { /* silent */ }
     };
     fetchUnread();
     const poll = setInterval(fetchUnread, 10000);
     return () => clearInterval(poll);
   }, [isLoggedIn]);
 
-  // Scroll effect for navbar
+  /* ── Close profile on outside click ──────── */
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Close profile dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (profileRef.current && !profileRef.current.contains(e.target)) {
-        setIsProfileOpen(false);
-      }
+    const onClick = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) setIsProfileOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
   const handleLogout = () => {
@@ -92,230 +134,210 @@ const Navbar = () => {
     setIsLoggedIn(false);
     setUserRole('GUEST');
     setIsProfileOpen(false);
-    navigate('/login');
+    navigate('/');
   };
 
-  const navItems = NAV_CONFIG[userRole] || NAV_CONFIG.GUEST;
-  const badge = ROLE_BADGE[userRole];
+  const navItems  = NAV_CONFIG[userRole] || NAV_CONFIG.GUEST;
+  const pillMode  = isHome && heroPassed;
+  const bgBlur    = isScrolled || !isHome;
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-arena-950/90 backdrop-blur-xl shadow-lg shadow-black/20 border-b border-white/5'
-          : 'bg-transparent'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <>
+      {/* ════ Fixed outer wrapper ════ */}
+      <div
+        className={`ah-nav-outer ${pillMode ? 'ah-nav-pill-mode' : ''}`}
+        role="banner"
+      >
+        {/* ════ Nav bar / pill ════ */}
+        <nav
+          ref={navRef}
+          className={`ah-nav ${pillMode ? 'ah-nav-pill' : ''} ${bgBlur ? 'ah-nav-blur' : ''}`}
+          aria-label="Main navigation"
+        >
+          <div className="ah-nav-inner">
 
-          {/* ── Logo ── */}
-          <Link to={isLoggedIn ? '/dashboard' : '/'} className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 transition-shadow">
-              A
-            </div>
-            <span className="text-lg font-bold text-white tracking-tight">
-              Arena<span className="text-emerald-400">Hub</span>
-            </span>
-          </Link>
-
-          {/* ── Desktop Navigation ── */}
-          <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <span className="text-base">{item.icon}</span>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* ── Right Side: Auth/Profile ── */}
-          <div className="flex items-center gap-3">
-            {isLoggedIn ? (
-              /* ── Logged-in: Role Badge + Profile Dropdown ── */
-              <div className="flex items-center gap-3">
-                {badge && (
-                  <span className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.color}`}>
-                    {badge.label}
-                  </span>
-                )}
-
-                {/* Chat Button — opens global chat sidebar */}
-                {userRole !== 'ADMIN' && (
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent('toggle-chat-sidebar'))}
-                    className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-indigo-500/20 transition-all group"
-                    id="navbar-chat-button"
-                    title="Messages"
-                  >
-                    <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 min-w-[18px] rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse shadow-lg">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                <div className="relative" ref={profileRef}>
-                  <button
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center gap-2 p-1.5 rounded-full hover:bg-white/10 transition-colors"
-                    id="navbar-profile-button"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-white text-xs font-bold shadow-md">
-                      {(localStorage.getItem('userRole') || 'U')[0].toUpperCase()}
-                    </div>
-                    <svg className={`w-4 h-4 text-slate-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {/* Profile Dropdown */}
-                  {isProfileOpen && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-xl glass shadow-2xl shadow-black/40 py-2 animate-fade-in-up">
-                      <div className="px-4 py-3 border-b border-white/10">
-                        <p className="text-sm font-semibold text-white">Account</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {userRole} • ID: {localStorage.getItem('userId')}
-                        </p>
-                      </div>
-                      <Link
-                        to="/dashboard"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
-                      >
-                        <span>📊</span> Dashboard
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
-                        id="navbar-logout-button"
-                      >
-                        <span>🚪</span> Sign Out
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* ── Guest: Login / Sign Up Buttons ── */
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/login"
-                  className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
-                  id="navbar-login-link"
-                >
-                  Log In
-                </Link>
-                <Link
-                  to="/signup"
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold hover:from-emerald-400 hover:to-emerald-500 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
-                  id="navbar-signup-link"
-                >
-                  Sign Up Free
-                </Link>
-              </div>
-            )}
-
-            {/* ── Mobile Hamburger ── */}
-            <button
-              className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              id="navbar-mobile-toggle"
+            {/* Logo */}
+            <Link
+              to={isLoggedIn ? '/dashboard' : '/'}
+              className="ah-nav-logo"
+              aria-label="ArenaHub home"
             >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {isMobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
+              <Logo />
+              <span className="ah-nav-wordmark">ARENAHUB</span>
+            </Link>
+
+            {/* Desktop links */}
+            <div className="ah-nav-links">
+              {navItems.map((item) => {
+                const active = !item.path.startsWith('/#') && location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`ah-nav-link ${active ? 'ah-nav-link-active' : ''}`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Right side */}
+            <div className="ah-nav-right">
+              {isLoggedIn ? (
+                <>
+                  {/* Chat */}
+                  {userRole !== 'ADMIN' && (
+                    <button
+                      className="ah-icon-btn"
+                      id="navbar-chat-button"
+                      title="Messages"
+                      onClick={() => window.dispatchEvent(new CustomEvent('toggle-chat-sidebar'))}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      {unreadCount > 0 && (
+                        <span className="ah-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Profile */}
+                  <div className="ah-profile-wrap" ref={profileRef}>
+                    <button
+                      className="ah-avatar-btn"
+                      id="navbar-profile-button"
+                      onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    >
+                      <span className="ah-avatar">
+                        {(localStorage.getItem('userRole') || 'U')[0].toUpperCase()}
+                      </span>
+                      <svg
+                        width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2"
+                        className={`ah-chevron ${isProfileOpen ? 'rotate-180' : ''}`}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {isProfileOpen && (
+                      <div className="ah-dropdown">
+                        <div className="ah-dropdown-header">
+                          <p className="ah-dropdown-role">{userRole}</p>
+                          <p className="ah-dropdown-id">ID: {localStorage.getItem('userId')}</p>
+                        </div>
+                        <Link
+                          to="/dashboard"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="ah-dropdown-item"
+                        >
+                          Dashboard
+                        </Link>
+                        <button
+                          id="navbar-logout-button"
+                          onClick={handleLogout}
+                          className="ah-dropdown-item ah-dropdown-item-btn"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Link
+                    id="navbar-login-link"
+                    to="/login"
+                    className="ah-nav-cta-ghost"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    id="navbar-signup-link"
+                    to="/signup"
+                    className="ah-nav-cta-solid"
+                  >
+                    Join
+                  </Link>
+                </>
+              )}
+
+              {/* Mobile hamburger */}
+              <button
+                id="navbar-mobile-toggle"
+                className="ah-hamburger"
+                onClick={() => setIsMobileOpen(!isMobileOpen)}
+                aria-label="Toggle menu"
+              >
+                <span className={`ah-ham-line ${isMobileOpen ? 'ah-ham-top-open' : ''}`} />
+                <span className={`ah-ham-line ${isMobileOpen ? 'ah-ham-mid-open' : ''}`} />
+                <span className={`ah-ham-line ${isMobileOpen ? 'ah-ham-bot-open' : ''}`} />
+              </button>
+            </div>
           </div>
-        </div>
+        </nav>
       </div>
 
-      {/* ── Mobile Menu ── */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden glass border-t border-white/5 animate-fade-in-up">
-          <div className="px-4 py-4 space-y-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  {item.label}
-                </Link>
-              );
-            })}
-            {!isLoggedIn && (
-              <div className="pt-3 border-t border-white/10 space-y-2">
-                <Link
-                  to="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-white/5"
-                >
-                  Log In
-                </Link>
-                <Link
-                  to="/signup"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full text-center px-4 py-3 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold"
-                >
-                  Sign Up Free
-                </Link>
-              </div>
-            )}
-            {isLoggedIn && (
-              <div className="pt-3 border-t border-white/10 space-y-1">
-                {userRole !== 'ADMIN' && (
-                  <button
-                    onClick={() => { setIsMobileMenuOpen(false); window.dispatchEvent(new CustomEvent('toggle-chat-sidebar')); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5"
-                  >
-                    <span>💬</span> Messages
-                    {unreadCount > 0 && (
-                      <span className="ml-auto w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-                )}
+      {/* ════ Mobile drawer ════ */}
+      <div className={`ah-mobile-drawer ${isMobileOpen ? 'ah-mobile-open' : ''}`}>
+        <div className="ah-mobile-inner">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => setIsMobileOpen(false)}
+              className="ah-mobile-link"
+            >
+              {item.label}
+            </Link>
+          ))}
+
+          {!isLoggedIn && (
+            <div className="ah-mobile-auth">
+              <Link
+                to="/login"
+                onClick={() => setIsMobileOpen(false)}
+                className="ah-mobile-auth-ghost"
+              >
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setIsMobileOpen(false)}
+                className="ah-mobile-auth-solid"
+              >
+                Join ArenaHub
+              </Link>
+            </div>
+          )}
+
+          {isLoggedIn && (
+            <div className="ah-mobile-auth">
+              {userRole !== 'ADMIN' && (
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-rose-400 hover:bg-rose-500/10"
+                  className="ah-mobile-auth-ghost"
+                  onClick={() => {
+                    setIsMobileOpen(false);
+                    window.dispatchEvent(new CustomEvent('toggle-chat-sidebar'));
+                  }}
                 >
-                  <span>🚪</span> Sign Out
+                  Messages {unreadCount > 0 && `(${unreadCount})`}
                 </button>
-              </div>
-            )}
-          </div>
+              )}
+              <button
+                className="ah-mobile-auth-ghost"
+                onClick={() => { setIsMobileOpen(false); handleLogout(); }}
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
-      )}
-    </nav>
+      </div>
+    </>
   );
 };
 
