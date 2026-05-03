@@ -75,22 +75,23 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-arena-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col mb-8">
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <span className="text-rose-500">🛡️</span> Admin Console
+          <p className="sports-kicker mb-1 text-white/80">League office</p>
+          <h1 className="font-display text-4xl sm:text-5xl text-white uppercase tracking-wide flex items-center gap-3">
+            <span className="text-zinc-300 not-italic">🛡️</span> Commish console
           </h1>
-          <p className="text-slate-400 mt-1">System-wide monitoring, user governance, and financial dispute resolution.</p>
+          <p className="text-slate-400 mt-2 text-sm max-w-2xl">League-wide ops — rosters, bans, and money plays when matches get voided.</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
-          <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-rose-500/20 text-rose-400' : 'text-slate-400 hover:text-white'}`}>👥 User Governance</button>
-          <button onClick={() => setActiveTab('disputes')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'disputes' ? 'bg-rose-500/20 text-rose-400' : 'text-slate-400 hover:text-white'}`}>⚖️ Dispute & Refunds</button>
+        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
+          <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'users' ? 'bg-white/10 text-white border-white/50 shadow-[0_0_20px_-8px_rgba(255,255,255,0.12)]' : 'text-slate-400 hover:text-white border-transparent'}`}>👥 User Governance</button>
+          <button onClick={() => setActiveTab('disputes')} className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'disputes' ? 'bg-white/10 text-white border-white/50 shadow-[0_0_20px_-8px_rgba(255,255,255,0.12)]' : 'text-slate-400 hover:text-white border-transparent'}`}>⚖️ Dispute & Refunds</button>
         </div>
 
         {/* ═══ TAB: Users ═══ */}
         {activeTab === 'users' && (
           <div className="animate-fade-in-up">
-            <div className="glass rounded-2xl overflow-hidden border border-rose-500/10">
+            <div className="glass rounded-2xl overflow-hidden border border-white/15">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-slate-300">
                   <thead className="bg-white/5 text-slate-400 text-xs uppercase font-semibold">
@@ -110,22 +111,22 @@ const AdminDashboard = () => {
                           <div className="text-xs text-slate-500">{u.email}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.role === 'Admin' ? 'bg-rose-500/10 text-rose-400' : u.role === 'Owner' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-700 text-slate-300'}`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.role === 'Admin' ? 'bg-white/15 text-zinc-100' : u.role === 'Owner' ? 'bg-white/10 text-zinc-200' : 'bg-slate-700 text-slate-300'}`}>
                             {u.role}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${u.status === 'BANNED' ? 'bg-rose-500 text-white' : 'text-emerald-400'}`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${u.status === 'BANNED' ? 'bg-zinc-700 text-white' : 'text-zinc-200'}`}>
                             {u.status || 'ACTIVE'}
                           </span>
                         </td>
                         <td className="px-6 py-4">{u.createdAt?.substring(0, 10)}</td>
                         <td className="px-6 py-4 text-right space-x-2">
                           {u.status !== 'BANNED' && u.role !== 'Admin' && (
-                            <button onClick={() => handleUserAction(u.userId, 'BAN')} className="px-3 py-1.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-bold">Ban User</button>
+                            <button onClick={() => handleUserAction(u.userId, 'BAN')} className="px-3 py-1.5 rounded bg-white/10 text-zinc-200 border border-white/25 hover:bg-white/15 text-xs font-bold">Ban User</button>
                           )}
                           {u.role === 'Player' && (
-                            <button onClick={() => handleUserAction(u.userId, 'PROMOTE_OWNER')} className="px-3 py-1.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 text-xs font-bold">Make Owner</button>
+                            <button onClick={() => handleUserAction(u.userId, 'PROMOTE_OWNER')} className="px-3 py-1.5 rounded bg-white/10 text-zinc-200 border border-white/25 hover:bg-white/15 text-xs font-bold">Make Owner</button>
                           )}
                         </td>
                       </tr>
@@ -142,20 +143,20 @@ const AdminDashboard = () => {
           <div className="animate-fade-in-up">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {disputes.map(d => (
-                <div key={d.bookingId} className="glass rounded-2xl p-6 border-l-4 border-rose-500 relative overflow-hidden">
+                <div key={d.bookingId} className="glass rounded-2xl p-6 border-l-4 border-white/50 relative overflow-hidden">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-lg font-bold text-white">Refund Pending: {d.turfName}</h3>
                       <p className="text-sm text-slate-400">Cancelled Booking • {d.date}</p>
                     </div>
-                    <span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-bold">CANCELLED</span>
+                    <span className="px-2 py-1 rounded bg-white/10 text-zinc-300 text-xs font-bold">CANCELLED</span>
                   </div>
                   <div className="p-3 bg-white/5 rounded-lg mb-4 text-sm">
                     <p className="text-slate-300">User: <strong className="text-white">{d.userName}</strong> (ID: {d.userId})</p>
-                    <p className="text-slate-300">Amount to Refund: <strong className="text-rose-400 text-lg">Rs. {d.price}</strong></p>
+                    <p className="text-slate-300">Amount to Refund: <strong className="text-zinc-200 text-lg">Rs. {d.price}</strong></p>
                   </div>
                   <button onClick={() => processRefund(d.bookingId, d.userId, d.price)} disabled={processingId === d.bookingId}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 text-white font-bold disabled:opacity-50 hover:from-rose-400 hover:to-rose-500 transition-all flex justify-center items-center gap-2">
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-white to-zinc-200 text-black font-bold disabled:opacity-50 hover:from-zinc-200 hover:to-zinc-300 transition-all flex justify-center items-center gap-2">
                     {processingId === d.bookingId ? 'Processing Transaction...' : 'Process Refund to Wallet'}
                   </button>
                 </div>

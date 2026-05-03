@@ -3,16 +3,16 @@ import React, { useState, useEffect, useRef } from 'react';
 const API = 'http://localhost:8080';
 
 const ROLE_COLORS = {
-  Player: 'from-emerald-400 to-emerald-600',
-  Captain: 'from-amber-400 to-amber-600',
-  Owner: 'from-cyan-400 to-cyan-600',
-  Admin: 'from-rose-400 to-rose-600',
+  Player: 'from-zinc-400 to-zinc-600',
+  Captain: 'from-zinc-400 to-zinc-600',
+  Owner: 'from-zinc-400 to-zinc-600',
+  Admin: 'from-zinc-400 to-zinc-600',
 };
 
 const ROLE_BADGE = {
-  Player: 'bg-emerald-500/20 text-emerald-400',
-  Captain: 'bg-amber-500/20 text-amber-400',
-  Owner: 'bg-cyan-500/20 text-cyan-400',
+  Player: 'bg-white/10 text-zinc-200',
+  Captain: 'bg-white/10 text-zinc-200',
+  Owner: 'bg-white/10 text-zinc-200',
 };
 
 const ChatSidebar = () => {
@@ -27,14 +27,22 @@ const ChatSidebar = () => {
 
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
-  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const getHeaders = () => {
+    const token = localStorage.getItem('token');
+    return { 
+      'Authorization': `Bearer ${token}`, 
+      'Content-Type': 'application/json' 
+    };
+  };
 
   // ── Fetch contacts list ──
   const fetchContacts = async () => {
     try {
-      const res = await fetch(`${API}/api/chat/contacts`, { headers });
+      const res = await fetch(`${API}/api/chat/contacts`, { headers: getHeaders() });
       if (res.ok) {
         const data = await res.json();
+        // data contains objects with id, name, role, lastMessage, unreadCount, etc.
         setContacts(data);
         setTotalUnread(data.reduce((sum, c) => sum + (c.unreadCount || 0), 0));
       }
@@ -44,7 +52,7 @@ const ChatSidebar = () => {
   // ── Fetch messages for active contact ──
   const fetchMessages = async (contactId) => {
     try {
-      const res = await fetch(`${API}/api/chat/messages?contactId=${contactId}`, { headers });
+      const res = await fetch(`${API}/api/chat/messages?contactId=${contactId}`, { headers: getHeaders() });
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
@@ -55,7 +63,10 @@ const ChatSidebar = () => {
   // ── Mark messages as read ──
   const markAsRead = async (contactId) => {
     try {
-      await fetch(`${API}/api/chat/read?contactId=${contactId}`, { method: 'PUT', headers });
+      await fetch(`${API}/api/chat/read?contactId=${contactId}`, { 
+        method: 'PUT', 
+        headers: getHeaders() 
+      });
     } catch (err) { console.error('Error marking as read:', err); }
   };
 
@@ -65,12 +76,13 @@ const ChatSidebar = () => {
     if (!newMessage.trim() || !activeContact) return;
     try {
       const res = await fetch(`${API}/api/chat/send`, {
-        method: 'POST', headers,
-        body: JSON.stringify({ receiverId: activeContact.userId, content: newMessage })
+        method: 'POST', 
+        headers: getHeaders(),
+        body: JSON.stringify({ contactId: activeContact.id, content: newMessage })
       });
       if (res.ok) {
         setNewMessage('');
-        fetchMessages(activeContact.userId);
+        fetchMessages(activeContact.id);
         fetchContacts();
       }
     } catch (err) { console.error('Error sending message:', err); }
@@ -79,21 +91,23 @@ const ChatSidebar = () => {
   // ── Open a conversation ──
   const openChat = (contact) => {
     setActiveContact(contact);
-    fetchMessages(contact.userId);
-    markAsRead(contact.userId);
+    fetchMessages(contact.id);
+    markAsRead(contact.id);
   };
 
   // ── Listen for "open-chat-sidebar" custom events from dashboard buttons ──
   useEffect(() => {
     const handler = (e) => {
-      const { contactUserId, contactName, contactRole } = e.detail;
+      // contactId should be passed now, or we fallback to 'U_' + contactUserId
+      const { contactId, contactUserId, contactName, contactRole } = e.detail;
+      const finalContactId = contactId || ('U_' + contactUserId);
       setIsOpen(true);
-      const existing = contacts.find(c => c.userId === contactUserId);
+      const existing = contacts.find(c => c.id === finalContactId);
       if (existing) {
         openChat(existing);
       } else {
         // Create a temporary contact entry
-        const temp = { userId: contactUserId, name: contactName || 'User', role: contactRole || 'Player', lastMessage: '', unreadCount: 0 };
+        const temp = { id: finalContactId, name: contactName || 'User', role: contactRole || 'Player', lastMessage: '', unreadCount: 0 };
         openChat(temp);
       }
     };
@@ -124,7 +138,7 @@ const ChatSidebar = () => {
 
   useEffect(() => {
     if (!activeContact) return;
-    const msgPoll = setInterval(() => fetchMessages(activeContact.userId), 5000);
+    const msgPoll = setInterval(() => fetchMessages(activeContact.id), 5000);
     return () => clearInterval(msgPoll);
   }, [activeContact]);
 
@@ -160,14 +174,14 @@ const ChatSidebar = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-white to-zinc-300 text-black shadow-2xl shadow-white/20 hover:shadow-white/30 hover:scale-110 transition-all duration-300 flex items-center justify-center group"
           id="chat-sidebar-toggle"
         >
           <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
           {totalUnread > 0 && (
-            <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center animate-pulse shadow-lg">
+            <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-zinc-700 text-white text-[11px] font-bold flex items-center justify-center animate-pulse shadow-lg">
               {totalUnread > 9 ? '9+' : totalUnread}
             </span>
           )}
@@ -184,10 +198,10 @@ const ChatSidebar = () => {
           />
 
           {/* Sidebar Panel */}
-          <div className="relative w-full max-w-[400px] h-full pointer-events-auto flex flex-col bg-arena-950/95 backdrop-blur-xl border-l border-indigo-500/20 shadow-2xl shadow-black/50 animate-slide-in-right">
+          <div className="relative w-full max-w-[400px] h-full pointer-events-auto flex flex-col bg-arena-950/95 backdrop-blur-xl border-l border-white/15 shadow-2xl shadow-black/50 animate-slide-in-right">
 
             {/* ── Header ── */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-indigo-500/5">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
               {activeContact ? (
                 <div className="flex items-center gap-3">
                   <button onClick={() => setActiveContact(null)} className="text-slate-400 hover:text-white transition-colors p-1">
@@ -207,12 +221,12 @@ const ChatSidebar = () => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-5 h-5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                   <h2 className="text-white font-bold text-base">Messages</h2>
                   {totalUnread > 0 && (
-                    <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-white text-black text-[10px] font-bold flex items-center justify-center">
                       {totalUnread}
                     </span>
                   )}
@@ -248,7 +262,7 @@ const ChatSidebar = () => {
                         <div key={m.messageId} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                           <div className={`px-4 py-2.5 rounded-2xl text-sm max-w-[85%] leading-relaxed ${
                             isMe
-                              ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-br-md shadow-md shadow-indigo-500/20'
+                              ? 'bg-gradient-to-br from-white to-zinc-200 text-black rounded-br-md shadow-md shadow-white/15'
                               : 'bg-white/10 text-slate-200 rounded-bl-md'
                           }`}>
                             {m.content}
@@ -269,12 +283,12 @@ const ChatSidebar = () => {
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/20 transition-all"
                   />
                   <button
                     type="submit"
                     disabled={!newMessage.trim()}
-                    className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-40 disabled:hover:from-indigo-500 text-white px-4 rounded-xl transition-all shadow-md shadow-indigo-500/20 flex items-center justify-center"
+                    className="bg-gradient-to-r from-white to-zinc-200 hover:from-zinc-200 hover:to-zinc-300 disabled:opacity-40 text-black px-4 rounded-xl transition-all shadow-md shadow-white/15 flex items-center justify-center"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -299,7 +313,7 @@ const ChatSidebar = () => {
                   <div className="divide-y divide-white/5">
                     {contacts.map(contact => (
                       <button
-                        key={contact.userId}
+                        key={contact.id}
                         onClick={() => openChat(contact)}
                         className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-all text-left group"
                       >
@@ -309,7 +323,7 @@ const ChatSidebar = () => {
                             {(contact.name || 'U')[0].toUpperCase()}
                           </div>
                           {contact.unreadCount > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg">
+                            <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-zinc-700 text-white text-[10px] font-bold flex items-center justify-center shadow-lg">
                               {contact.unreadCount}
                             </span>
                           )}
@@ -344,16 +358,6 @@ const ChatSidebar = () => {
         </div>
       )}
 
-      {/* ── Slide-in animation ── */}
-      <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0.8; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in-right {
-          animation: slideInRight 0.3s ease-out;
-        }
-      `}</style>
     </>
   );
 };

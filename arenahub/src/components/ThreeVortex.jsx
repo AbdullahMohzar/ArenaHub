@@ -13,14 +13,14 @@ const ThreeVortex = ({ className = '' }) => {
     const camera = new THREE.PerspectiveCamera(60, mount.clientWidth / mount.clientHeight, 0.1, 100);
     camera.position.z = 3.2;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.setClearColor(0x000000, 0);
     mount.appendChild(renderer.domElement);
 
-    // Particle vortex
-    const count = 3500;
+    // Particle vortex (count is the main GPU cost; keep hero readable with fewer points)
+    const count = 2200;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const sizes = new Float32Array(count);
@@ -101,7 +101,7 @@ const ThreeVortex = ({ className = '' }) => {
     scene.add(particles);
 
     // Second inner ring (brighter, smaller)
-    const innerCount = 800;
+    const innerCount = 500;
     const innerPos = new Float32Array(innerCount * 3);
     const innerColors = new Float32Array(innerCount * 3);
     const innerSizes = new Float32Array(innerCount);

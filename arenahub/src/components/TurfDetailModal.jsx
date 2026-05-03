@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { resolveUploadImageUrl } from './VenueImageCarousel';
 
 const API = 'http://localhost:8080';
 
@@ -9,7 +10,7 @@ const StarRating = ({ rating, onRate, interactive = false }) => (
         key={star}
         type="button"
         onClick={() => interactive && onRate(star)}
-        className={`text-lg transition-transform ${interactive ? 'hover:scale-125 cursor-pointer' : 'cursor-default'} ${star <= rating ? 'text-amber-400' : 'text-slate-600'}`}
+        className={`text-lg transition-transform ${interactive ? 'hover:scale-125 cursor-pointer' : 'cursor-default'} ${star <= rating ? 'text-white' : 'text-slate-600'}`}
       >★</button>
     ))}
   </div>
@@ -31,6 +32,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
   } else if (turf.ImageURL) {
     galleryImages.push(turf.ImageURL);
   }
+  const galleryImageSrcs = galleryImages.map((img) => resolveUploadImageUrl(img, API, 'turfs'));
 
   useEffect(() => {
     fetchReviews();
@@ -114,7 +116,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
       <div className="w-full max-w-4xl max-h-full bg-arena-900 rounded-3xl overflow-hidden flex flex-col shadow-2xl border border-white/10 relative">
         
         {/* Close Button */}
-        <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 bg-black/50 hover:bg-rose-500 rounded-full text-white transition-all backdrop-blur-md">
+        <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 bg-black/50 hover:bg-zinc-700 rounded-full text-white transition-all backdrop-blur-md">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
@@ -123,30 +125,30 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
           
           {/* Image Carousel Hero */}
           <div className="relative h-64 sm:h-96 bg-black flex items-center justify-center group">
-            {galleryImages.length > 0 ? (
+            {galleryImageSrcs.length > 0 ? (
               <>
-                <img src={`${API}${galleryImages[currentImageIndex]}`} alt={turf.Name} className="w-full h-full object-cover transition-opacity duration-500" />
+                <img src={galleryImageSrcs[currentImageIndex]} alt={turf.Name} className="w-full h-full object-cover transition-opacity duration-500" />
                 
                 {/* Carousel Controls */}
-                {galleryImages.length > 1 && (
+                {galleryImageSrcs.length > 1 && (
                   <>
                     <button 
-                      onClick={() => setCurrentImageIndex(prev => (prev === 0 ? galleryImages.length - 1 : prev - 1))}
-                      className="absolute left-4 p-2 rounded-full bg-black/50 text-white hover:bg-emerald-500 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                      onClick={() => setCurrentImageIndex(prev => (prev === 0 ? galleryImageSrcs.length - 1 : prev - 1))}
+                      className="absolute left-4 p-2 rounded-full bg-black/50 text-white hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
                     >
                       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                     </button>
                     <button 
-                      onClick={() => setCurrentImageIndex(prev => (prev === galleryImages.length - 1 ? 0 : prev + 1))}
-                      className="absolute right-4 p-2 rounded-full bg-black/50 text-white hover:bg-emerald-500 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                      onClick={() => setCurrentImageIndex(prev => (prev === galleryImageSrcs.length - 1 ? 0 : prev + 1))}
+                      className="absolute right-4 p-2 rounded-full bg-black/50 text-white hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
                     >
                       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                     </button>
                     
                     {/* Dots */}
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                      {galleryImages.map((_, idx) => (
-                        <button key={idx} onClick={() => setCurrentImageIndex(idx)} className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentImageIndex ? 'bg-emerald-500 scale-125' : 'bg-white/50 hover:bg-white'}`} />
+                      {galleryImageSrcs.map((_, idx) => (
+                        <button key={idx} onClick={() => setCurrentImageIndex(idx)} className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white'}`} />
                       ))}
                     </div>
                   </>
@@ -161,8 +163,8 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
             
             {/* Title & Badge */}
             <div className="absolute bottom-6 left-6 right-6">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white mb-2 shadow-lg">{turf.SportType}</span>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-white drop-shadow-md">{turf.Name}</h1>
+              <span className="inline-flex items-center px-3 py-1 rounded-sm text-[10px] font-display tracking-[0.15em] uppercase bg-white text-black mb-2 shadow-lg border border-white/30">{turf.SportType}</span>
+              <h1 className="text-3xl sm:text-5xl font-display text-white drop-shadow-md uppercase tracking-wide leading-none">{turf.Name}</h1>
             </div>
           </div>
 
@@ -178,7 +180,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                 <div>
                   <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-1">Location</h3>
                   <p className="text-slate-200 flex items-start gap-2">
-                    <span className="text-emerald-500">📍</span> {turf.Location || "Location not specified."}
+                    <span className="text-zinc-300">📍</span> {turf.Location || "Location not specified."}
                   </p>
                 </div>
               </div>
@@ -186,7 +188,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
               <div className="bg-white/5 border border-white/10 p-5 rounded-2xl flex flex-col justify-between">
                 <div>
                   <div className="text-sm text-slate-400 mb-1">Price per Hour</div>
-                  <div className="text-3xl font-bold text-emerald-400">Rs. {turf.PricePerHour}</div>
+                  <div className="text-3xl font-bold text-zinc-200">Rs. {turf.PricePerHour}</div>
                   {turf.AvgRating > 0 && (
                     <div className="flex items-center gap-2 mt-4">
                       <StarRating rating={Math.round(turf.AvgRating)} />
@@ -197,10 +199,10 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                 </div>
                 
                 <div className="mt-6 space-y-3">
-                  <button onClick={() => { onClose(); onBookNow(turf); }} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20 hover:scale-[1.02] transition-transform">
+                  <button onClick={() => { onClose(); onBookNow(turf); }} className="w-full py-3 rounded-md bg-gradient-to-r from-white to-zinc-200 text-black font-bold text-sm uppercase tracking-widest shadow-[0_0_24px_-6px_rgba(255,255,255,0.15)] border border-white/30 hover:scale-[1.02] transition-transform">
                     Book Now
                   </button>
-                  <button onClick={() => openChatSidebar(turf.OwnerID, 'Owner')} className="w-full py-3 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-bold hover:bg-indigo-500/30 transition-colors flex items-center justify-center gap-2">
+                  <button onClick={() => openChatSidebar(turf.OwnerID, 'Owner')} className="w-full py-3 rounded-xl bg-white/10 text-zinc-200 border border-white/25 font-bold hover:bg-white/20 transition-colors flex items-center justify-center gap-2">
                     <span>💬</span> Contact Owner
                   </button>
                 </div>
@@ -223,9 +225,9 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
 
               {/* Review Form */}
               {showReviewForm && (
-                <form onSubmit={submitReview} className="mb-8 p-5 bg-white/5 border border-emerald-500/30 rounded-2xl animate-fade-in-up">
+                <form onSubmit={submitReview} className="mb-8 p-5 bg-white/5 border border-white/25 rounded-2xl animate-fade-in-up">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-emerald-400">Rate your experience</h3>
+                    <h3 className="font-semibold text-zinc-200">Rate your experience</h3>
                     <button type="button" onClick={() => setShowReviewForm(false)} className="text-slate-500 hover:text-white text-sm">Cancel</button>
                   </div>
                   
@@ -237,7 +239,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                     value={reviewForm.reviewText} 
                     onChange={e => setReviewForm({...reviewForm, reviewText: e.target.value})} 
                     placeholder="Tell us about the pitch quality, facilities, etc..." 
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white text-sm focus:border-emerald-500 outline-none mb-4" 
+                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white text-sm focus:border-white/50 outline-none mb-4" 
                     rows="3" 
                   />
                   
@@ -246,7 +248,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                     <input 
                       type="file" multiple accept="image/*" 
                       onChange={e => setReviewForm({...reviewForm, imageFiles: Array.from(e.target.files)})} 
-                      className="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30" 
+                      className="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-zinc-200 hover:file:bg-white/20" 
                     />
                     
                     {reviewForm.imageFiles.length > 0 && (
@@ -260,7 +262,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                     )}
                   </div>
                   
-                  <button type="submit" className="px-6 py-2.5 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all">
+                  <button type="submit" className="px-6 py-2.5 rounded-xl bg-white text-black font-bold hover:bg-zinc-200 transition-all">
                     Submit Review
                   </button>
                 </form>
@@ -280,7 +282,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                     <div key={review.reviewId} className="p-5 bg-white/5 rounded-2xl border border-white/5">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                          <div className="w-8 h-8 rounded-full bg-white/10 text-zinc-200 flex items-center justify-center font-bold text-sm">
                             {review.userName.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -301,10 +303,10 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
                           {review.images.map((img, idx) => (
                             <button 
                               key={idx} 
-                              onClick={() => setFullscreenImage(`${API}${img}`)}
-                              className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border border-white/10 hover:border-emerald-500/50 transition-all group"
+                                    onClick={() => setFullscreenImage(resolveUploadImageUrl(img, API, 'reviews'))}
+                              className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border border-white/10 hover:border-white/40 transition-all group"
                             >
-                              <img src={`${API}${img}`} alt={`Review photo ${idx+1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <img src={resolveUploadImageUrl(img, API, 'reviews')} alt={`Review photo ${idx+1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
                                 <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
                               </div>
@@ -325,7 +327,7 @@ const TurfDetailModal = ({ turf, onClose, onBookNow, userId, token }) => {
       {/* Fullscreen Image Viewer Modal */}
       {fullscreenImage && (
         <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in" onClick={() => setFullscreenImage(null)}>
-          <button className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white hover:bg-rose-500 transition-all">
+          <button className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white hover:bg-zinc-700 transition-all">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
           <img src={fullscreenImage} alt="Fullscreen preview" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />

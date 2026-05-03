@@ -1,9 +1,7 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.Statement;
 import java.sql.SQLException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.sql.Statement;
 
 public class DBFix {
     public static void main(String[] args) {
@@ -64,7 +62,7 @@ public class DBFix {
             System.out.println("Migration fix complete!");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Migration fix failed: " + e.getMessage());
         }
     }
 }

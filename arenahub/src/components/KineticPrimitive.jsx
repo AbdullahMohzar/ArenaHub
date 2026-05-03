@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
-import Marquee from 'react-fast-marquee';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 // ── MAGNETIC BUTTON ──────────────────────────────────────────────────────────
 export const MagneticButton = ({ children, onClick, className = '', disabled = false }) => {
@@ -51,15 +50,19 @@ export const KineticCard = ({ children, className = '', index = 0, onClick }) =>
   );
 };
 
-// ── KINETIC MARQUEE ──────────────────────────────────────────────────────────
-export const KineticMarquee = ({ text, speed = 50, direction = "left", className = '' }) => {
+// ── KINETIC MARQUEE (CSS scroll — no extra dependency) ─────────────────────
+export const KineticMarquee = ({ text, className = '' }) => {
+  const strip = (
+    <span className="text-3xl md:text-5xl font-black uppercase text-transparent bg-clip-text bg-zinc-800 px-4 whitespace-nowrap brutal-text-stroke shrink-0">
+      {text} •{' '}
+    </span>
+  );
   return (
     <div className={`border-y-2 border-zinc-800 bg-zinc-900 overflow-hidden py-2 ${className}`}>
-      <Marquee speed={speed} direction={direction} gradient={false} pauseOnHover>
-        <span className="text-3xl md:text-5xl font-black uppercase text-transparent bg-clip-text bg-zinc-800 px-4 whitespace-nowrap brutal-text-stroke">
-          {text} • {text} • {text} • {text} • 
-        </span>
-      </Marquee>
+      <div className="kinetic-marquee-track">
+        {strip}
+        {strip}
+      </div>
     </div>
   );
 };

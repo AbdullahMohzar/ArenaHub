@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+                             http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+         version="3.0"
+         metadata-complete="false">
+
+    <!-- 
+        Filter ordering: CorsFilter must run BEFORE AuthFilter.
+        @WebFilter annotations don't guarantee ordering, so we define it here.
+        metadata-complete="false" tells the container to still scan for @WebServlet annotations.
+    -->
+
+    <!-- 1. CORS Filter — Always runs first, sets CORS headers on every response -->
+    <filter>
+        <filter-name>CorsFilter</filter-name>
+        <filter-class>com.arenahub.filters.CorsFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>CorsFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
+    <!-- 2. Auth Filter — Runs second, handles JWT validation -->
+    <filter>
+        <filter-name>AuthFilter</filter-name>
+        <filter-class>com.arenahub.filters.AuthFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+</web-app>

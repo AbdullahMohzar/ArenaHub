@@ -8,8 +8,8 @@
   --ah-ink: #f0ede8;
   --ah-muted: rgba(240, 237, 232, 0.55);
   --ah-border: rgba(255, 255, 255, 0.09);
-  --ah-blue: #4f8ef7;
-  --ah-blue-glow: rgba(79, 142, 247, 0.22);
+  --ah-blue: #d4d4d4;
+  --ah-blue-glow: rgba(255, 255, 255, 0.12);
   --ah-serif: 'Fraunces', ui-serif, Georgia, serif;
   --ah-sans: 'Inter', system-ui, sans-serif;
 }
@@ -1595,21 +1595,21 @@ html[data-page="home"] body {
 }
 
 .ah-strip-teal {
-  background: #5a8a96;
-  color: #0a0a12;
+  background: #3f3f46;
+  color: #f4f4f5;
 }
 
 .ah-strip-teal .ah-strip-num {
-  color: rgba(10, 10, 18, 0.5);
+  color: rgba(244, 244, 245, 0.55);
 }
 
 .ah-strip-coral {
-  background: #e07a45;
-  color: #0a0a12;
+  background: #52525b;
+  color: #fafafa;
 }
 
 .ah-strip-coral .ah-strip-num {
-  color: rgba(10, 10, 18, 0.5);
+  color: rgba(250, 250, 250, 0.55);
 }
 
 .ah-strip-light {
@@ -1901,13 +1901,13 @@ html[data-page="home"] body {
 }
 
 .ah-expand-teal {
-  background: #5a8a96;
-  color: #0a0a12;
+  background: #3f3f46;
+  color: #f4f4f5;
 }
 
 .ah-expand-coral {
-  background: #e07a45;
-  color: #0a0a12;
+  background: #52525b;
+  color: #fafafa;
 }
 
 .ah-expand-light {
@@ -2228,13 +2228,13 @@ html[data-page="home"] body {
 }
 
 .ah-expand-teal {
-  background: #5a8a96;
-  color: #0a0a12;
+  background: #3f3f46;
+  color: #f4f4f5;
 }
 
 .ah-expand-coral {
-  background: #e07a45;
-  color: #0a0a12;
+  background: #52525b;
+  color: #fafafa;
 }
 
 .ah-expand-light {
@@ -2356,3 +2356,5 @@ html[data-page="home"] body {
   opacity: 1;
   transform: translateY(0);
 }
+
+

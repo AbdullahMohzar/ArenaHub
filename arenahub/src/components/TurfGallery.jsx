@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Marquee from 'react-fast-marquee';
 import { MagneticButton } from './KineticPrimitive';
+import { resolveUploadImageUrl } from './VenueImageCarousel';
 
 const API = 'http://localhost:8080';
 
 export const ReviewMarquee = ({ reviews }) => {
   if (!reviews || reviews.length === 0) return null;
-  
+
+  const strip = reviews.map((r, idx) => (
+    <div key={idx} className="flex items-center gap-4 mx-8 shrink-0">
+      <span className="text-black font-black text-2xl uppercase">&ldquo;{r.ReviewText}&rdquo;</span>
+      <span className="text-black/60 font-bold text-sm">— {r.UserName} ({r.Rating}/5)</span>
+      <span className="text-black/20 text-3xl font-black">/</span>
+    </div>
+  ));
+
   return (
-    <div className="border-t-2 border-zinc-800 bg-[var(--role-color)] mt-8 py-4 relative group">
+    <div className="border-t-2 border-zinc-800 bg-[var(--role-color)] mt-8 py-4 relative group overflow-hidden">
       <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" />
-      <Marquee speed={60} pauseOnHover className="group-hover:speed-100">
-        {reviews.map((r, idx) => (
-          <div key={idx} className="flex items-center gap-4 mx-8">
-            <span className="text-black font-black text-2xl uppercase">"{r.ReviewText}"</span>
-            <span className="text-black/60 font-bold text-sm">— {r.UserName} ({r.Rating}/5)</span>
-            <span className="text-black/20 text-3xl font-black">/</span>
-          </div>
-        ))}
-      </Marquee>
+      <div className="kinetic-marquee-track">
+        <div className="flex w-max">{strip}</div>
+        <div className="flex w-max">{strip}</div>
+      </div>
     </div>
   );
 };
@@ -29,6 +32,8 @@ const TurfGallery = ({ turf, images, reviews, onBook }) => {
 
   const mainImage = images.length > 0 ? images[activeImage] : turf.ImageURL;
   const thumbnails = images.length > 0 ? images : [turf.ImageURL];
+  const mainImageSrc = resolveUploadImageUrl(mainImage, API, 'turfs');
+  const thumbnailSrcs = thumbnails.map((img) => resolveUploadImageUrl(img, API, 'turfs'));
 
   return (
     <div className="w-full bg-zinc-950 border-2 border-zinc-800">
@@ -40,7 +45,7 @@ const TurfGallery = ({ turf, images, reviews, onBook }) => {
           <AnimatePresence mode="wait">
             <motion.img
               key={activeImage}
-              src={`${API}${mainImage}`}
+              src={mainImageSrc}
               alt="Turf"
               initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -68,13 +73,13 @@ const TurfGallery = ({ turf, images, reviews, onBook }) => {
             <h3 className="text-2xl font-black text-white uppercase border-b-2 border-zinc-800 pb-2">Gallery</h3>
             
             <div className="grid grid-cols-2 gap-2">
-              {thumbnails.map((img, idx) => (
+              {thumbnailSrcs.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImage(idx)}
                   className={`aspect-square border-2 transition-all ${activeImage === idx ? 'border-[var(--role-color)] scale-95' : 'border-zinc-800 hover:border-zinc-600'}`}
                 >
-                  <img src={`${API}${img}`} className="w-full h-full object-cover grayscale hover:grayscale-0" alt={`Thumb ${idx}`} />
+                  <img src={img} className="w-full h-full object-cover grayscale hover:grayscale-0" alt={`Thumb ${idx}`} />
                 </button>
               ))}
             </div>

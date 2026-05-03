@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
 import com.arenahub.utils.DatabaseConnection;
+import com.arenahub.utils.UploadPaths;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -49,7 +50,6 @@ public class ReviewServlet extends HttpServlet {
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
-    // GET /api/reviews?turfId=X — Fetch reviews for a turf (with images)
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -81,7 +81,6 @@ public class ReviewServlet extends HttpServlet {
                         reviewList.add(review);
                     }
                     
-                    // Load images for each review
                     JsonArray arr = new JsonArray();
                     for (JsonObject review : reviewList) {
                         int reviewId = review.get("reviewId").getAsInt();
@@ -109,7 +108,6 @@ public class ReviewServlet extends HttpServlet {
         }
     }
 
-    // POST /api/reviews — Submit a review with optional images
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -117,44 +115,57 @@ public class ReviewServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
 
         try {
-            int userId = 0, turfId = 0, rating = 0, bookingId = 0;
-            String reviewText = "";
             List<String> imageUrls = new ArrayList<>();
 
+            int userId = 0;
+            int turfId = 0;
+            int rating = 0;
+            int bookingId = 0;
+            String reviewText = "";
+
             if (req.getContentType() != null && req.getContentType().toLowerCase().startsWith("multipart/form-data")) {
-                // Multipart: form fields + images
-                userId = Integer.parseInt(req.getParameter("userId"));
-                turfId = Integer.parseInt(req.getParameter("turfId"));
-                rating = Integer.parseInt(req.getParameter("rating"));
-                bookingId = req.getParameter("bookingId") != null ? Integer.parseInt(req.getParameter("bookingId")) : 0;
+                String uId = req.getParameter("userId");
+                if (uId != null) userId = Integer.parseInt(uId);
+                
+                String tId = req.getParameter("turfId");
+                if (tId != null) turfId = Integer.parseInt(tId);
+                
+                String rat = req.getParameter("rating");
+                if (rat != null) rating = Integer.parseInt(rat);
+                
+                String bId = req.getParameter("bookingId");
+                if (bId != null) bookingId = Integer.parseInt(bId);
+                
                 reviewText = req.getParameter("reviewText") != null ? req.getParameter("reviewText") : "";
 
-                // Save uploaded images
-                String uploadPath = "D:/ArenaHub/uploads/reviews";
-                File uploadDir = new File(uploadPath);
+                File uploadDir = UploadPaths.resolveUploadDir(req.getServletContext(), "reviews");
                 if (!uploadDir.exists()) uploadDir.mkdirs();
+                String uploadPath = uploadDir.getAbsolutePath();
 
                 for (Part part : req.getParts()) {
                     if ("images".equals(part.getName()) && part.getSize() > 0 && part.getContentType() != null && part.getContentType().startsWith("image/")) {
                         String fileName = UUID.randomUUID().toString() + "_" + getFileName(part);
                         part.write(uploadPath + File.separator + fileName);
-                        imageUrls.add("/uploads/reviews/" + fileName);
+                        imageUrls.add(UploadPaths.resolvePublicUrl("reviews", fileName));
                     }
                 }
             } else {
-                // JSON body (no images)
-                BufferedReader reader = req.getReader();
-                JsonObject json = new Gson().fromJson(reader, JsonObject.class);
-                if (json == null || !json.has("userId") || !json.has("turfId") || !json.has("rating")) {
-                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    resp.getWriter().write("{\"error\":\"userId, turfId, and rating are required\"}");
-                    return;
+                try (BufferedReader reader = req.getReader()) {
+                    JsonObject json = new Gson().fromJson(reader, JsonObject.class);
+                    if (json != null) {
+                        if (json.has("userId")) userId = json.get("userId").getAsInt();
+                        if (json.has("turfId")) turfId = json.get("turfId").getAsInt();
+                        if (json.has("rating")) rating = json.get("rating").getAsInt();
+                        if (json.has("bookingId")) bookingId = json.get("bookingId").getAsInt();
+                        if (json.has("reviewText")) reviewText = json.get("reviewText").getAsString();
+                    }
                 }
-                userId = json.get("userId").getAsInt();
-                turfId = json.get("turfId").getAsInt();
-                rating = json.get("rating").getAsInt();
-                bookingId = json.has("bookingId") ? json.get("bookingId").getAsInt() : 0;
-                reviewText = json.has("reviewText") ? json.get("reviewText").getAsString() : "";
+            }
+
+            if (userId == 0 || turfId == 0) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("{\"error\":\"userId and turfId are required\"}");
+                return;
             }
 
             if (rating < 1 || rating > 5) {
@@ -164,7 +175,6 @@ public class ReviewServlet extends HttpServlet {
             }
 
             try (Connection conn = DatabaseConnection.getConnection()) {
-                // Check if user already reviewed this turf
                 String checkSql = "SELECT ReviewID FROM Reviews WHERE UserID = ? AND TurfID = ?";
                 try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
                     checkStmt.setInt(1, userId);
@@ -172,7 +182,6 @@ public class ReviewServlet extends HttpServlet {
                     try (ResultSet rs = checkStmt.executeQuery()) {
                         if (rs.next()) {
                             int existingReviewId = rs.getInt("ReviewID");
-                            // Update existing review
                             String updateSql = "UPDATE Reviews SET Rating = ?, ReviewText = ? WHERE ReviewID = ?";
                             try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                                 updateStmt.setInt(1, rating);
@@ -180,7 +189,6 @@ public class ReviewServlet extends HttpServlet {
                                 updateStmt.setInt(3, existingReviewId);
                                 updateStmt.executeUpdate();
                             }
-                            // Add any new images to existing review
                             if (!imageUrls.isEmpty()) {
                                 insertReviewImages(conn, existingReviewId, imageUrls);
                             }
@@ -191,7 +199,6 @@ public class ReviewServlet extends HttpServlet {
                     }
                 }
 
-                // Insert new review
                 String sql = "INSERT INTO Reviews (UserID, TurfID, BookingID, Rating, ReviewText) VALUES (?, ?, ?, ?, ?)";
                 int newReviewId = -1;
                 try (PreparedStatement stmt = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
@@ -207,7 +214,6 @@ public class ReviewServlet extends HttpServlet {
                     }
                 }
 
-                // Insert review images
                 if (newReviewId > 0 && !imageUrls.isEmpty()) {
                     insertReviewImages(conn, newReviewId, imageUrls);
                 }
@@ -216,7 +222,6 @@ public class ReviewServlet extends HttpServlet {
                 resp.getWriter().write("{\"message\":\"Review submitted!\"}");
             }
         } catch (SQLException e) {
-            System.err.println("Review error: " + e.getMessage());
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             resp.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
         }

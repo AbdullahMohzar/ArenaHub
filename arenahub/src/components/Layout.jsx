@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './Navbar';
 import ChatSidebar from './ChatSidebar';
-import { useLocation } from 'react-router-dom';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 import CursorFollower from './CursorFollower';
 
-const Layout = ({ children }) => {
+const Layout = () => {
   const location = useLocation();
 
   useEffect(() => {
@@ -22,7 +23,6 @@ const Layout = ({ children }) => {
     // Only set role if we are logged in, otherwise default
     const role = localStorage.getItem('userRole');
     if (role && location.pathname !== '/login' && location.pathname !== '/signup') {
-      // Capitalize first letter: Player, Captain, Owner, Admin
       const formattedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
       document.documentElement.setAttribute('data-role', formattedRole);
     } else {
@@ -42,14 +42,16 @@ const Layout = ({ children }) => {
       <ChatSidebar />
       <main className="pt-16 min-h-screen relative z-10">
         <AnimatePresence mode="wait">
-          {children}
+          <motion.div
+            key={location.pathname}
+            className="min-h-[calc(100vh-4rem)]"
+          >
+            <Outlet />
+          </motion.div>
         </AnimatePresence>
       </main>
     </>
   );
 };
-
-// Also export AnimatePresence for the wrapper
-import { AnimatePresence } from 'framer-motion';
 
 export default Layout;

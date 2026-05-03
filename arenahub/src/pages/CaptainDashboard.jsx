@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ChatWidget from '../components/ChatWidget';
 import TurfDetailModal from '../components/TurfDetailModal';
+import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
+import BookingPoster, { EmptyBookings } from '../components/BookingPoster';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -19,15 +20,15 @@ const CaptainDashboard = () => {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [activeTab, setActiveTab] = useState('book');
+  const [bookingFilter, setBookingFilter] = useState('UPCOMING');
   const location = useLocation();
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
   const [toppingUp, setToppingUp] = useState(false);
-  const [activeChatBookingId, setActiveChatBookingId] = useState(null);
 
   // Helper to open the global chat sidebar for direct messages
-  const openChatSidebar = (contactUserId, contactName, contactRole) => {
+  const openChatSidebar = (contactUserId, contactName, contactRole, contactId = null) => {
     window.dispatchEvent(new CustomEvent('open-chat-sidebar', {
-      detail: { contactUserId, contactName, contactRole }
+      detail: { contactId, contactUserId, contactName, contactRole }
     }));
   };
 
@@ -243,54 +244,44 @@ const CaptainDashboard = () => {
       {/* Payment Overlay */}
       {processingPayment && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center z-50">
-          <div className="w-14 h-14 border-4 border-white/20 border-t-amber-400 rounded-full animate-spin" />
+          <div className="w-14 h-14 border-4 border-white/20 border-t-white/50 rounded-full animate-spin" />
           <p className="text-white text-lg font-semibold mt-5">Processing Squad Payment...</p>
           <p className="text-slate-400 text-sm mt-1">Please wait while we secure your slot</p>
         </div>
       )}
 
-      {/* Squad Chat Widget (booking-based group chat only) */}
-      {activeChatBookingId && (
-        <ChatWidget 
-          currentUserId={userId} 
-          bookingId={activeChatBookingId} 
-          onClose={() => setActiveChatBookingId(null)} 
-          title="Squad Chat"
-        />
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">Captain's Dashboard</h1>
-            <p className="text-slate-400 mt-1">Organize matches, secure recurring slots, and rent squad equipment.</p>
+            <p className="sports-kicker mb-1">Sideline</p>
+            <h1 className="font-display text-4xl sm:text-5xl text-white uppercase tracking-wide">Captain&apos;s desk</h1>
+            <p className="text-slate-400 mt-2 text-sm max-w-lg">Call the plays — lock slots, go public for pickups, stack gear for the squad.</p>
           </div>
           {/* Wallet Card */}
           <div className="glass rounded-2xl px-6 py-4 flex items-center gap-4">
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wider">Wallet Balance</p>
-              <p className="text-2xl font-bold text-amber-400">Rs. {wallet.balance?.toLocaleString('en-IN') || 0}</p>
+              <p className="text-2xl font-bold text-zinc-200">Rs. {wallet.balance?.toLocaleString('en-IN') || 0}</p>
             </div>
             <button onClick={() => topUpWallet(1000)} disabled={toppingUp}
-              className="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-400 text-sm font-semibold border border-amber-500/30 hover:bg-amber-500/30 disabled:opacity-50 transition-all">
+              className="px-4 py-2 rounded-lg bg-white/10 text-zinc-200 text-sm font-semibold border border-white/25 hover:bg-white/20 disabled:opacity-50 transition-all">
               {toppingUp ? '...' : '+ Rs. 1,000'}
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
+        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
           <button onClick={() => setActiveTab('book')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'book' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'book' ? 'bg-white/10 text-white border-white/50 shadow-[0_0_20px_-8px_rgba(255,255,255,0.12)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
             🛡️ Book & Manage
           </button>
           <button onClick={() => setActiveTab('bookings')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'bookings' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'bookings' ? 'bg-white/10 text-white border-white/50 shadow-[0_0_20px_-8px_rgba(255,255,255,0.12)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
             📋 Squad Bookings
           </button>
           <button onClick={() => setActiveTab('wallet')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'wallet' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === 'wallet' ? 'bg-white/10 text-white border-white/50 shadow-[0_0_20px_-8px_rgba(255,255,255,0.12)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
             💰 My Wallet
           </button>
         </div>
@@ -305,48 +296,54 @@ const CaptainDashboard = () => {
                   <input
                     type="text" placeholder="Search venues by name..." value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
                   />
                 </div>
                 <select value={sportFilter} onChange={e => setSportFilter(e.target.value)}
-                  className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 appearance-none">
+                  className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30 appearance-none">
                   {sportTypes.map(s => <option key={s} value={s} className="bg-arena-900">{s === 'All' ? 'All Sports' : s}</option>)}
                 </select>
                 <div className="flex items-center gap-3 min-w-[200px]">
                   <span className="text-xs text-slate-400 whitespace-nowrap">Max Rs.{maxPrice}</span>
                   <input type="range" min="200" max="5000" step="100" value={maxPrice}
                     onChange={e => setMaxPrice(Number(e.target.value))}
-                    className="flex-1 accent-amber-500 h-1.5" />
+                    className="flex-1 accent-white h-1.5" />
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {turfs.map(turf => (
-                <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'hover:border-white/20'}`}>
-                  {/* Image Header */}
-                  <div className="h-48 bg-slate-800 relative">
-                    {turf.ImageURL ? (
-                      <img src={`${API}${turf.ImageURL}`} alt={turf.Name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-amber-900 to-arena-950">
-                        <span className="text-4xl mb-2">🏟️</span>
-                        <span className="text-amber-400/50 text-sm font-semibold tracking-widest uppercase">ArenaHub Turf</span>
-                      </div>
+              {turfs.map((turf) => {
+                const turfUrls = collectTurfImageUrls(turf, API);
+                return (
+                <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-white/40 shadow-lg shadow-white/10' : 'hover:border-white/20'}`}>
+                  <div className="h-48 bg-slate-800 relative isolate">
+                    <VenueImageCarousel urls={turfUrls} alt={turf.Name} emptyVariant="captain" />
+                    {turfUrls.length > 1 && (
+                      <span className="absolute top-3 left-3 z-10 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-black/55 text-white border border-white/10 backdrop-blur-sm">
+                        {turfUrls.length} photos
+                      </span>
                     )}
                   </div>
                   <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-white">{turf.Name}</h3>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-slate-300 mt-1">{turf.SportType}</span>
+                    <div className="flex items-start justify-between mb-4 gap-3">
+                      <div className="flex gap-3 min-w-0">
+                        {turfUrls[0] ? (
+                          <div className="h-14 w-14 rounded-xl overflow-hidden border-2 border-white/35 shrink-0 shadow-md ring-1 ring-white/10 bg-slate-900">
+                            <img src={turfUrls[0]} alt="" className="h-full w-full object-cover" />
+                          </div>
+                        ) : null}
+                        <div className="min-w-0">
+                          <h3 className="text-xl font-bold text-white truncate">{turf.Name}</h3>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-slate-300 mt-1">{turf.SportType}</span>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-amber-400">Rs. {turf.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
-                        <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold border border-indigo-500/30 hover:bg-indigo-500/30 transition-all">
+                        <p className="text-xl font-bold text-zinc-200">Rs. {turf.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                        <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 text-xs font-semibold border border-white/25 hover:bg-white/20 transition-all">
                           💬 Contact Owner
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedTurf(turf); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold border border-emerald-500/30 hover:bg-emerald-500/30 transition-all">
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedTurf(turf); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 text-xs font-semibold border border-white/25 hover:bg-white/20 transition-all">
                           🖼️ View Details
                         </button>
                       </div>
@@ -359,7 +356,7 @@ const CaptainDashboard = () => {
                           <h4 className="text-sm font-semibold text-white mb-3">1. Select Schedule</h4>
                           <input type="date" value={bookingForm.bookingDate} min={new Date().toISOString().split('T')[0]}
                             onChange={e => handleDateChange(e, turf.TurfID)}
-                            className="w-full px-3 py-2 bg-arena-950 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 mb-4" />
+                            className="w-full px-3 py-2 bg-arena-950 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30 mb-4" />
 
                           {bookingForm.bookingDate && (
                             <div>
@@ -368,13 +365,13 @@ const CaptainDashboard = () => {
                                   const occ = isSlotOccupied(h), sel = isSlotSelected(h);
                                   return (
                                     <button key={h} onClick={() => handleSlotClick(h)}
-                                      className={`py-2 rounded text-xs font-semibold transition-all ${occ ? 'bg-rose-500/20 text-rose-400 cursor-not-allowed opacity-60' : sel ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>
+                                      className={`py-2 rounded text-xs font-semibold transition-all ${occ ? 'bg-white/10 text-zinc-400 cursor-not-allowed opacity-60' : sel ? 'bg-white text-black shadow-md shadow-white/20' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>
                                       {String(h).padStart(2, '0')}
                                     </button>
                                   );
                                 })}
                               </div>
-                              {bookingForm.startTime && <p className="text-sm text-amber-400 font-semibold mt-3 text-center">Selected: {bookingForm.startTime} — {bookingForm.endTime}</p>}
+                              {bookingForm.startTime && <p className="text-sm text-zinc-200 font-semibold mt-3 text-center">Selected: {bookingForm.startTime} — {bookingForm.endTime}</p>}
                             </div>
                           )}
                         </div>
@@ -387,7 +384,7 @@ const CaptainDashboard = () => {
                             <div className="relative flex items-center justify-center w-5 h-5 mt-0.5">
                               <input type="checkbox" className="peer sr-only" checked={bookingForm.visibility === 'PUBLIC'}
                                 onChange={(e) => setBookingForm({ ...bookingForm, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />
-                              <div className="w-5 h-5 border-2 border-slate-500 rounded peer-checked:bg-amber-500 peer-checked:border-amber-500 transition-colors"></div>
+                              <div className="w-5 h-5 border-2 border-slate-500 rounded peer-checked:bg-white peer-checked:border-white transition-colors"></div>
                               <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                             </div>
                             <div>
@@ -408,7 +405,7 @@ const CaptainDashboard = () => {
                             <div className="relative flex items-center justify-center w-5 h-5 mt-0.5">
                               <input type="checkbox" className="peer sr-only" checked={bookingForm.isRecurring}
                                 onChange={(e) => setBookingForm({ ...bookingForm, isRecurring: e.target.checked })} />
-                              <div className="w-5 h-5 border-2 border-slate-500 rounded peer-checked:bg-amber-500 peer-checked:border-amber-500 transition-colors"></div>
+                              <div className="w-5 h-5 border-2 border-slate-500 rounded peer-checked:bg-white peer-checked:border-white transition-colors"></div>
                               <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                             </div>
                             <div>
@@ -421,29 +418,33 @@ const CaptainDashboard = () => {
                         {/* 3. Equipment Add-ons (UC-09) */}
                         <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                           <h4 className="text-sm font-semibold text-white mb-3">3. Equipment Add-ons</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {equipmentList.map(eq => {
-                              const isSelected = bookingForm.selectedEquipment.some(e => e.equipmentId === eq.equipmentId);
-                              return (
-                                <button key={eq.equipmentId} onClick={() => toggleEquipment(eq)}
-                                  className={`flex items-center justify-between p-3 rounded-lg border text-left transition-all ${isSelected ? 'bg-amber-500/10 border-amber-500/50' : 'bg-arena-950 border-white/10 hover:border-white/20'}`}>
-                                  <div>
-                                    <p className={`text-sm font-medium ${isSelected ? 'text-amber-400' : 'text-slate-300'}`}>{eq.name}</p>
-                                    <p className="text-xs text-slate-500">+Rs. {eq.pricePerHour}</p>
-                                  </div>
-                                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-amber-500 bg-amber-500' : 'border-slate-500'}`}>
-                                    {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {equipmentList.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {equipmentList.map(eq => {
+                                const isSelected = bookingForm.selectedEquipment.some(e => e.equipmentId === eq.equipmentId);
+                                return (
+                                  <button key={eq.equipmentId} onClick={() => toggleEquipment(eq)}
+                                    className={`flex items-center justify-between p-3 rounded-lg border text-left transition-all ${isSelected ? 'bg-white/10 border-white/40' : 'bg-arena-950 border-white/10 hover:border-white/20'}`}>
+                                    <div>
+                                      <p className={`text-sm font-medium ${isSelected ? 'text-zinc-200' : 'text-slate-300'}`}>{eq.name}</p>
+                                      <p className="text-xs text-slate-500">+Rs. {eq.pricePerHour}</p>
+                                    </div>
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-white bg-white' : 'border-slate-500'}`}>
+                                      {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-500">No equipment add-ons are available right now.</p>
+                          )}
                         </div>
 
                         {/* Checkout */}
                         <div className="pt-2 flex gap-3">
                           <button onClick={() => submitBooking(turf.TurfID)} disabled={!bookingForm.startTime}
-                            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold disabled:opacity-40 shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition-all flex items-center justify-between px-6">
+                            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-white to-zinc-200 text-black font-bold disabled:opacity-40 shadow-lg shadow-white/15 hover:from-zinc-200 hover:to-zinc-300 transition-all flex items-center justify-between px-6">
                             <span>Checkout</span>
                             <span>Rs. {calculateTotal(turf.PricePerHour).toLocaleString('en-IN')}</span>
                           </button>
@@ -459,7 +460,8 @@ const CaptainDashboard = () => {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             {/* Turf Detail Modal */}
@@ -478,50 +480,53 @@ const CaptainDashboard = () => {
         {/* ═══ TAB: Squad Bookings ═══ */}
         {activeTab === 'bookings' && (
           <div className="animate-fade-in-up space-y-4">
-            {myBookings.map(b => (
-              <div key={b.BookingID} className="glass rounded-2xl p-5 flex flex-col sm:flex-row gap-5">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold text-white">{b.TurfName}</h3>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${b.Status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>{b.Status}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-y-2 mt-4 text-sm">
-                    <div><span className="text-slate-500">Date:</span> <span className="text-slate-300 ml-1">{b.BookingDate}</span></div>
-                    <div><span className="text-slate-500">Time:</span> <span className="text-slate-300 ml-1">{b.StartTime?.substring(0,5)} - {b.EndTime?.substring(0,5)}</span></div>
-                    <div><span className="text-slate-500">Type:</span> <span className={`ml-1 font-medium ${b.Visibility === 'PUBLIC' ? 'text-cyan-400' : 'text-slate-300'}`}>{b.Visibility}</span></div>
-                    {b.Visibility === 'PUBLIC' && (
-                      <div><span className="text-slate-500">Players:</span> <span className="text-slate-300 ml-1">{b.CurrentPlayers} / {b.MaxPlayers}</span></div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 justify-center sm:min-w-[140px]">
-                  {b.Status === 'CONFIRMED' && (
-                    <>
-                      <button onClick={() => toggleVisibility(b.BookingID)} className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-all ${b.Visibility === 'PUBLIC' ? 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10' : 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10'}`}>
-                        Make {b.Visibility === 'PUBLIC' ? 'Private' : 'Public'}
-                      </button>
-                      {b.Visibility === 'PUBLIC' && (
-                        <button onClick={() => setActiveChatBookingId(b.BookingID)} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all flex items-center justify-center gap-1.5">
-                          💬 Squad Chat
-                        </button>
-                      )}
-                      <button onClick={() => cancelBooking(b.BookingID)} className="w-full py-2.5 rounded-xl border border-rose-500/30 text-rose-400 text-sm font-medium hover:bg-rose-500/10 transition-all">Cancel Booking</button>
-                    </>
-                  )}
-                  {b.PaymentStatus === 'PAID' && (
-                    <div className="w-full py-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold text-center border border-emerald-500/20">PAYMENT SECURED</div>
-                  )}
-                </div>
-              </div>
+            {/* Kinetic Filter Bar */}
+            <div className="flex gap-2 mb-6">
+              {['UPCOMING', 'COMPLETED', 'CANCELLED'].map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => setBookingFilter(filter)}
+                  className={`px-6 py-2 font-black font-space uppercase text-sm border-2 transition-colors ${
+                    bookingFilter === filter
+                      ? 'bg-white border-white text-black'
+                      : 'border-white/20 text-white hover:border-white/50 hover:text-white'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+
+            {myBookings
+              .filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+              })
+              .map(b => (
+              <BookingPoster 
+                key={b.BookingID} 
+                booking={b} 
+                onCancel={cancelBooking} 
+                onChat={() => openChatSidebar(null, b.TurfName + ' Squad', 'SQUAD', 'B_' + b.BookingID)} 
+                onToggleVisibility={toggleVisibility}
+                roleColor="amber" 
+              />
             ))}
-            {myBookings.length === 0 && <p className="text-slate-500 text-center py-12">No squad bookings found.</p>}
+            {myBookings.filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+            }).length === 0 && <EmptyBookings />}
           </div>
         )}
 
         {/* ═══ TAB: My Wallet ═══ */}
         {activeTab === 'wallet' && (
           <div className="animate-fade-in-up">
-            <div className="glass rounded-2xl overflow-hidden border border-amber-500/10">
+            <div className="glass rounded-2xl overflow-hidden border border-white/15">
               <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
                 <div>
                   <h2 className="text-xl font-bold text-white">Transaction History</h2>
@@ -545,14 +550,14 @@ const CaptainDashboard = () => {
                         <td className="px-6 py-4">{t.description}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${
-                            t.type === 'TOP_UP' ? 'bg-emerald-500/10 text-emerald-400' :
-                            t.type === 'REFUND' ? 'bg-amber-500/10 text-amber-400' :
-                            'bg-rose-500/10 text-rose-400'
+                            t.type === 'TOP_UP' ? 'bg-white/10 text-zinc-200' :
+                            t.type === 'REFUND' ? 'bg-white/10 text-zinc-300' :
+                            'bg-white/10 text-zinc-400'
                           }`}>
                             {t.type}
                           </span>
                         </td>
-                        <td className={`px-6 py-4 text-right font-bold ${['TOP_UP', 'REFUND'].includes(t.type) ? 'text-emerald-400' : 'text-white'}`}>
+                        <td className={`px-6 py-4 text-right font-bold ${['TOP_UP', 'REFUND'].includes(t.type) ? 'text-zinc-200' : 'text-white'}`}>
                           {['TOP_UP', 'REFUND'].includes(t.type) ? '+' : '-'} Rs. {t.amount}
                         </td>
                       </tr>

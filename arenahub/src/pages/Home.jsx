@@ -4,6 +4,9 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import '../home.css';
 import EthosSection from '../components/EthosSection';
+import FeaturesCarousel from '../components/FeaturesCarousel';
+
+import PlatformModules from '../components/PlatformModules';
 
 const ThreeVortex = lazy(() => import('../components/ThreeVortex'));
 
@@ -97,9 +100,12 @@ const Home = () => {
     const root = rootRef.current;
     if (!root) return;
 
+    let ctx = null;
+    let cancelled = false;
     // Wait a frame so DOM is fully rendered
     const timer = setTimeout(() => {
-      const ctx = gsap.context(() => {
+      if (cancelled) return;
+      ctx = gsap.context(() => {
 
         /* Hero lines stagger-in */
         gsap.fromTo('.ah-hero-line', { yPercent: 110, opacity: 0 }, {
@@ -144,6 +150,24 @@ const Home = () => {
           );
         }
 
+                /* ── Ethos → Features light sheet transition ── */
+        const featuresSection = document.querySelector('#features');
+        if (featuresSection) {
+          gsap.fromTo(featuresSection, 
+            { borderRadius: '32px 32px 0 0', y: 80 }, 
+            { 
+              borderRadius: '0px 0px 0 0', 
+              y: 0, 
+              ease: 'none',
+              scrollTrigger: {
+                trigger: featuresSection,
+                start: 'top 95%',
+                end: 'top 40%',
+                scrub: 1.2,
+              },
+            }
+          );
+        }
         /* Section titles slide-up */
         gsap.utils.toArray('.ah-section-title').forEach((el) => {
           gsap.fromTo(el, { y: 50, opacity: 0 }, {
@@ -161,26 +185,42 @@ const Home = () => {
           });
         }
 
-        /* ── PORTFOLIO pinned horizontal scroll ── */
-        const portSection = document.querySelector('.ah-portfolio-section');
-        const portTrack = document.querySelector('.ah-portfolio-track');
-        const portViewport = document.querySelector('.ah-portfolio-viewport');
-        if (portSection && portTrack && portViewport) {
-          const scrollDist = portTrack.scrollWidth - portViewport.offsetWidth;
-          gsap.to(portTrack, {
-            x: -scrollDist,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: portSection,
-              start: 'top top',
-              end: () => `+=${scrollDist}`,
-              pin: true,
-              scrub: 1,
-              anticipatePin: 1,
-              invalidateOnRefresh: true,
-            },
-          });
+       
+        
+                /* ── Features cards entrance ── */
+        const featureItems = document.querySelectorAll('.ah-feature-item');
+        if (featureItems.length) {
+          gsap.fromTo(featureItems, 
+            { y: 80, opacity: 0, rotateX: 15 }, 
+            {
+              y: 0, 
+              opacity: 1, 
+              rotateX: 0,
+              duration: 0.9, 
+              ease: 'power3.out', 
+              stagger: 0.12,
+              scrollTrigger: { 
+                trigger: '.ah-features-cards', 
+                start: 'top 85%',
+              },
+            }
+          );
         }
+
+        /* ── Features header entrance ── */
+        gsap.fromTo('.ah-features-header', 
+          { y: 50, opacity: 0 }, 
+          {
+            y: 0, 
+            opacity: 1, 
+            duration: 1, 
+            ease: 'expo.out',
+            scrollTrigger: { 
+              trigger: '.ah-features-header', 
+              start: 'top 85%',
+            },
+          }
+        );
 
         /* Stats counter */
         gsap.utils.toArray('.ah-stat-num').forEach((el) => {
@@ -200,12 +240,12 @@ const Home = () => {
         });
 
       }, root);
-
-      return () => ctx.revert();
     }, 100);
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
+      ctx?.revert();
       // Reset body styles when leaving home
       document.body.style.backgroundColor = '';
       document.body.style.color = '';
@@ -296,59 +336,11 @@ const Home = () => {
       {/* ════════ ETHOS — WQF Accordion Strips ════════ */}
       <EthosSection />
 
-      {/* ════════ FEATURES ════════ */}
-      <section id="features" className="ah-section ah-section-light">
-        <div className="ah-container">
-          <div className="ah-section-header">
-            <p className="ah-eyebrow ah-eyebrow-dark">Our Focus</p>
-            <h2 className="ah-section-title ah-h2 ah-h2-dark">
-              Better booking.<br />Better games.
-            </h2>
-            <p className="ah-section-sub ah-sub-dark">
-              Every feature exists to cut friction between you and the pitch.
-            </p>
-          </div>
+             {/* ════════ FEATURES — Draggable Card Carousel ════════ */}
+      <FeaturesCarousel />
 
-          <div className="ah-features-grid">
-            {FEATURES.map((f) => (
-              <div className="ah-card ah-feature-card" key={f.num}>
-                <span className="ah-feature-num">{f.num}</span>
-                <h3 className="ah-feature-title">{f.label}</h3>
-                <p className="ah-feature-body">{f.body}</p>
-                <div className="ah-feature-arrow">→</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════ PORTFOLIO — pinned horizontal scroll ════════ */}
-      <section className="ah-portfolio-section">
-        <div className="ah-portfolio-left">
-          <p className="ah-eyebrow">Platform Modules</p>
-          <h2 className="ah-section-title ah-h2" style={{ color: '#fff' }}>
-            Venues.<br />Teams.<br /><em>Community.</em>
-          </h2>
-          <p className="ah-section-sub" style={{ color: 'rgba(255,255,255,0.45)', marginTop: '16px' }}>
-            In ArenaHub, every module is built to reduce friction and increase game time.
-          </p>
-        </div>
-
-        <div className="ah-portfolio-viewport">
-          <div className="ah-portfolio-track">
-            {MODULES.map((m, i) => (
-              <div className="ah-portfolio-card" key={`${m}-${i}`}>
-                <span className="ah-portfolio-num">0{i + 1}</span>
-                <h3 className="ah-portfolio-title">{m}</h3>
-                <p className="ah-portfolio-body">
-                  Core capability available to all ArenaHub users.
-                </p>
-                <span className="ah-portfolio-arrow">↗</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            {/* ════════ PLATFORM MODULES — Sticky Left + Scrolling Cards ════════ */}
+      <PlatformModules />
 
       {/* ════════ CTA / CONTACT ════════ */}
       <section id="contact" className="ah-cta-section">

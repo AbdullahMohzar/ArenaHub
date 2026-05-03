@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ChatWidget from '../components/ChatWidget';
 import TurfDetailModal from '../components/TurfDetailModal';
+import { collectTurfImageUrls, VenueImageCarousel } from '../components/VenueImageCarousel';
+import GameCard from '../components/GameCard';
+import BookingPoster, { EmptyBookings } from '../components/BookingPoster';
 
 const API = 'http://localhost:8080';
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
@@ -13,7 +15,7 @@ const StarRating = ({ rating, onRate, interactive = false }) => (
         key={star}
         type="button"
         onClick={() => interactive && onRate(star)}
-        className={`text-lg transition-transform ${interactive ? 'hover:scale-125 cursor-pointer' : 'cursor-default'} ${star <= rating ? 'text-amber-400' : 'text-slate-600'}`}
+        className={`text-lg transition-transform ${interactive ? 'hover:scale-125 cursor-pointer' : 'cursor-default'} ${star <= rating ? 'text-white' : 'text-slate-600'}`}
       >★</button>
     ))}
   </div>
@@ -28,12 +30,14 @@ const PlayerDashboard = () => {
   const [turfs, setTurfs] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
   const [publicGames, setPublicGames] = useState([]);
+  const [equipmentList, setEquipmentList] = useState([]);
   const [wallet, setWallet] = useState({ balance: 0 });
   const [busySlots, setBusySlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [toppingUp, setToppingUp] = useState(false);
   const [activeTab, setActiveTab] = useState('turfs');
+  const [bookingFilter, setBookingFilter] = useState('UPCOMING');
   const location = useLocation();
 
   useEffect(() => {
@@ -49,7 +53,13 @@ const PlayerDashboard = () => {
   const [maxPrice, setMaxPrice] = useState(5000);
 
   // Booking form
-  const [bookingForm, setBookingForm] = useState({ turfId: null, bookingDate: '', startTime: '', endTime: '' });
+  const [bookingForm, setBookingForm] = useState({
+    turfId: null,
+    bookingDate: '',
+    startTime: '',
+    endTime: '',
+    selectedEquipment: [],
+  });
   
   // Turf Detail Modal
   const [selectedTurf, setSelectedTurf] = useState(null);
@@ -60,13 +70,10 @@ const PlayerDashboard = () => {
   const [reviewText, setReviewText] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Chat System (squad chat only — direct messages use global ChatSidebar)
-  const [activeChatBookingId, setActiveChatBookingId] = useState(null);
-
   // Helper to open the global chat sidebar for direct messages
-  const openChatSidebar = (contactUserId, contactName, contactRole) => {
+  const openChatSidebar = (contactUserId, contactName, contactRole, contactId = null) => {
     window.dispatchEvent(new CustomEvent('open-chat-sidebar', {
-      detail: { contactUserId, contactName, contactRole }
+      detail: { contactId, contactUserId, contactName, contactRole }
     }));
   };
 
@@ -95,7 +102,7 @@ const PlayerDashboard = () => {
 
   const fetchPublicGames = async () => {
     try {
-      const res = await fetch(`${API}/api/bookings?publicGames=true`, { headers });
+      const res = await fetch(`${API}/api/bookings?publicGames=true&userId=${userId}`, { headers });
       if (res.ok) setPublicGames(await res.json());
     } catch (err) { console.error(err); }
   };
@@ -107,8 +114,15 @@ const PlayerDashboard = () => {
     } catch (err) { console.error(err); }
   };
 
+  const fetchEquipment = async () => {
+    try {
+      const res = await fetch(`${API}/api/equipment`, { headers });
+      if (res.ok) setEquipmentList(await res.json());
+    } catch (err) { console.error(err); }
+  };
+
   useEffect(() => { fetchTurfs(); }, [fetchTurfs]);
-  useEffect(() => { fetchBookings(); fetchPublicGames(); fetchWallet(); }, []);
+  useEffect(() => { fetchBookings(); fetchPublicGames(); fetchWallet(); fetchEquipment(); }, []);
 
   // ── Conflict fetch ──
   const fetchConflicts = async (turfId, date) => {
@@ -132,8 +146,22 @@ const PlayerDashboard = () => {
     return s >= bookingForm.startTime && e <= bookingForm.endTime;
   };
 
+  // Check if slot time has already passed (only for today)
+  const isPastTime = (hour) => {
+    if (!bookingForm.bookingDate) return false;
+    const selectedDate = new Date(bookingForm.bookingDate).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Only check if booking date is today
+    if (selectedDate !== today) return false;
+    
+    // Compare hour with current hour
+    const currentHour = new Date().getHours();
+    return hour < currentHour;
+  };
+
   const handleSlotClick = (hour) => {
-    if (isSlotOccupied(hour)) return;
+    if (isSlotOccupied(hour) || isPastTime(hour)) return;
     const cs = `${String(hour).padStart(2, '0')}:00`, ce = `${String(hour + 1).padStart(2, '0')}:00`;
     if (!bookingForm.startTime || bookingForm.endTime) {
       setBookingForm(p => ({ ...p, startTime: cs, endTime: ce }));
@@ -149,6 +177,24 @@ const PlayerDashboard = () => {
     fetchConflicts(turfId, e.target.value);
   };
 
+  // ── Equipment Selection ──
+  const toggleEquipment = (eq) => {
+    setBookingForm(prev => {
+      const existing = prev.selectedEquipment.find(e => e.equipmentId === eq.equipmentId);
+      if (existing) {
+        return {
+          ...prev,
+          selectedEquipment: prev.selectedEquipment.filter(e => e.equipmentId !== eq.equipmentId),
+        };
+      }
+
+      return {
+        ...prev,
+        selectedEquipment: [...prev.selectedEquipment, { ...eq, quantity: 1, totalPrice: eq.pricePerHour }],
+      };
+    });
+  };
+
   // ── Booking submission with payment simulation ──
   const submitBooking = async (turfId) => {
     if (!bookingForm.startTime || !bookingForm.endTime) return alert('Select a time slot.');
@@ -157,11 +203,11 @@ const PlayerDashboard = () => {
     try {
       const res = await fetch(`${API}/api/bookings`, {
         method: 'POST', headers,
-        body: JSON.stringify({ userId: parseInt(userId), turfId, ...bookingForm })
+        body: JSON.stringify({ userId: parseInt(userId), turfId, ...bookingForm, equipment: bookingForm.selectedEquipment })
       });
       const data = await res.json();
       if (res.ok) {
-        setBookingForm({ turfId: null, bookingDate: '', startTime: '', endTime: '' });
+        setBookingForm({ turfId: null, bookingDate: '', startTime: '', endTime: '', selectedEquipment: [] });
         setBusySlots([]);
         fetchBookings();
       } else alert(data.error);
@@ -191,6 +237,21 @@ const PlayerDashboard = () => {
       });
       const data = await res.json();
       if (res.ok) { fetchPublicGames(); alert('🎉 ' + data.message); }
+      else alert(data.error);
+    } catch (err) { console.error(err); }
+  };
+
+  // ── Leave public game ──
+  const leaveGame = async (bookingId) => {
+    try {
+      const res = await fetch(`${API}/api/squad/leave`, {
+        method: 'DELETE', headers,
+        body: JSON.stringify({ bookingId, userId: parseInt(userId) })
+      });
+      const data = await res.json();
+      if (res.ok) { 
+        fetchPublicGames(); 
+      }
       else alert(data.error);
     } catch (err) { console.error(err); }
   };
@@ -247,7 +308,7 @@ const PlayerDashboard = () => {
       {/* Payment Overlay */}
       {processingPayment && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center z-50">
-          <div className="w-14 h-14 border-4 border-white/20 border-t-emerald-400 rounded-full animate-spin" />
+          <div className="w-14 h-14 border-4 border-white/20 border-t-white/50 rounded-full animate-spin" />
           <p className="text-white text-lg font-semibold mt-5">Processing Payment...</p>
           <p className="text-slate-400 text-sm mt-1">Please do not close this window</p>
         </div>
@@ -267,12 +328,12 @@ const PlayerDashboard = () => {
               onChange={e => setReviewText(e.target.value)}
               placeholder="Tell us about your experience (optional)..."
               rows={3}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 mb-4 resize-none"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 mb-4 resize-none"
             />
             <div className="flex gap-3">
               <button onClick={() => setReviewingBooking(null)} className="flex-1 py-2.5 rounded-xl border border-white/10 text-slate-400 text-sm font-medium hover:bg-white/5">Cancel</button>
               <button onClick={submitReview} disabled={reviewRating === 0 || submittingReview}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold disabled:opacity-50">
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-white to-zinc-200 text-black text-sm font-semibold disabled:opacity-50">
                 {submittingReview ? 'Submitting...' : 'Submit Review'}
               </button>
             </div>
@@ -280,38 +341,28 @@ const PlayerDashboard = () => {
         </div>
       )}
 
-      {/* Squad Chat Widget (booking-based group chat only) */}
-      {activeChatBookingId && (
-        <ChatWidget 
-          currentUserId={userId} 
-          bookingId={activeChatBookingId} 
-          onClose={() => setActiveChatBookingId(null)} 
-          title="Squad Chat"
-        />
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">Player Dashboard</h1>
-            <p className="text-slate-400 mt-1">Find venues, join games, and track your bookings</p>
+            <p className="sports-kicker mb-1">Home pitch</p>
+            <h1 className="font-display text-4xl sm:text-5xl text-white uppercase tracking-wide">Player bench</h1>
+            <p className="text-slate-400 mt-2 text-sm max-w-lg">Hunt venues, jump into public runs, and keep every booking in your highlight reel.</p>
           </div>
           {/* Wallet Card */}
           <div className="glass rounded-2xl px-6 py-4 flex items-center gap-4">
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wider">Wallet Balance</p>
-              <p className="text-2xl font-bold text-emerald-400">Rs. {wallet.balance?.toLocaleString('en-IN') || 0}</p>
+              <p className="text-2xl font-bold text-zinc-200">Rs. {wallet.balance?.toLocaleString('en-IN') || 0}</p>
             </div>
             <button onClick={() => topUpWallet(1000)} disabled={toppingUp}
-              className="px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm font-semibold border border-emerald-500/30 hover:bg-emerald-500/30 disabled:opacity-50 transition-all">
+              className="px-4 py-2 rounded-lg bg-white/10 text-zinc-200 text-sm font-semibold border border-white/25 hover:bg-white/20 disabled:opacity-50 transition-all">
               {toppingUp ? '...' : '+ Rs. 1,000'}
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-xl mb-6 w-fit">
+        <div className="flex flex-wrap gap-1 p-1.5 glass rounded-lg mb-6 w-fit ring-1 ring-white/5">
           {[
             { key: 'turfs', label: '🏟️ Browse Turfs', },
             { key: 'games', label: '⚽ Public Games', },
@@ -319,7 +370,7 @@ const PlayerDashboard = () => {
             { key: 'wallet', label: '💰 My Wallet', },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.key ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+              className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all border-b-2 ${activeTab === tab.key ? 'bg-white/10 text-white border-white/50 shadow-[0_0_20px_-8px_rgba(255,255,255,0.12)]' : 'text-slate-400 hover:text-white hover:bg-white/5 border-transparent'}`}>
               {tab.label}
             </button>
           ))}
@@ -336,48 +387,55 @@ const PlayerDashboard = () => {
                   <input
                     type="text" placeholder="Search venues..." value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
                   />
                 </div>
                 <select value={sportFilter} onChange={e => setSportFilter(e.target.value)}
-                  className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none">
+                  className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30 appearance-none">
                   {sportTypes.map(s => <option key={s} value={s} className="bg-arena-900">{s === 'All' ? 'All Sports' : s}</option>)}
                 </select>
                 <div className="flex items-center gap-3 min-w-[200px]">
                   <span className="text-xs text-slate-400 whitespace-nowrap">Max Rs.{maxPrice}</span>
                   <input type="range" min="200" max="5000" step="100" value={maxPrice}
                     onChange={e => setMaxPrice(Number(e.target.value))}
-                    className="flex-1 accent-emerald-500 h-1.5" />
+                    className="flex-1 accent-white h-1.5" />
                 </div>
               </div>
             </div>
 
             {/* Turf Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {turfs.map(turf => (
-                <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden group transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/10' : 'hover:border-emerald-500/30'}`}>
-                  {/* Image Header */}
-                  <div className="h-36 bg-slate-800 relative">
-                    {turf.ImageURL ? (
-                      <img src={`${API}${turf.ImageURL}`} alt={turf.Name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-emerald-900/40 to-arena-800">
-                        <span className="text-4xl mb-2 opacity-40">🏟️</span>
-                      </div>
+              {turfs.map((turf) => {
+                const turfUrls = collectTurfImageUrls(turf, API);
+                return (
+                <div key={turf.TurfID} className={`glass rounded-2xl overflow-hidden group transition-all duration-300 ${bookingForm.turfId === turf.TurfID ? 'border-white/40 shadow-lg shadow-white/10' : 'hover:border-white/25'}`}>
+                  <div className="h-36 bg-slate-800 relative isolate">
+                    <VenueImageCarousel urls={turfUrls} alt={turf.Name} emptyVariant="player" />
+                    {turfUrls.length > 1 && (
+                      <span className="absolute top-2 left-2 z-10 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-black/55 text-white border border-white/10 backdrop-blur-sm">
+                        {turfUrls.length} photos
+                      </span>
                     )}
                   </div>
                   <div className="p-5">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="text-lg font-semibold text-white">{turf.Name}</h3>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{turf.SportType}</span>
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="flex gap-2.5 min-w-0">
+                        {turfUrls[0] ? (
+                          <div className="h-12 w-12 rounded-lg overflow-hidden border-2 border-white/35 shrink-0 shadow-md ring-1 ring-white/10 bg-slate-900">
+                            <img src={turfUrls[0]} alt="" className="h-full w-full object-cover" />
+                          </div>
+                        ) : null}
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold text-white truncate">{turf.Name}</h3>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-zinc-200 border border-white/20">{turf.SportType}</span>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-emerald-400">Rs. {turf.PricePerHour}<span className="text-xs text-slate-500">/hr</span></p>
-                        <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold border border-indigo-500/30 hover:bg-indigo-500/30 transition-all">
+                        <p className="text-lg font-bold text-zinc-200">Rs. {turf.PricePerHour}<span className="text-xs text-slate-500">/hr</span></p>
+                        <button onClick={(e) => { e.stopPropagation(); openChatSidebar(turf.OwnerID, null, 'Owner'); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 text-xs font-semibold border border-white/25 hover:bg-white/20 transition-all">
                           💬 Contact Owner
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); setSelectedTurf(turf); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold border border-emerald-500/30 hover:bg-emerald-500/30 transition-all">
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedTurf(turf); }} className="mt-1 flex items-center justify-end w-full gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 text-xs font-semibold border border-white/25 hover:bg-white/20 transition-all">
                           🖼️ View Details
                         </button>
                       </div>
@@ -393,17 +451,17 @@ const PlayerDashboard = () => {
                       <div className="space-y-3 mt-3 pt-3 border-t border-white/10">
                         <input type="date" value={bookingForm.bookingDate} min={new Date().toISOString().split('T')[0]}
                           onChange={e => handleDateChange(e, turf.TurfID)}
-                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50" />
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30" />
 
                         {bookingForm.bookingDate && (
                           <div>
                             <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">{loadingSlots ? 'Loading...' : 'Select Time'}</p>
                             <div className="grid grid-cols-6 gap-1.5">
                               {HOURS.map(h => {
-                                const occ = isSlotOccupied(h), sel = isSlotSelected(h);
+                                const occ = isSlotOccupied(h), sel = isSlotSelected(h), past = isPastTime(h);
                                 return (
                                   <button key={h} onClick={() => handleSlotClick(h)}
-                                    className={`py-1.5 rounded text-xs font-semibold transition-all ${occ ? 'bg-rose-500/20 text-rose-400 cursor-not-allowed opacity-60' : sel ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>
+                                    className={`py-1.5 rounded text-xs font-semibold transition-all ${past ? 'bg-white/10 text-zinc-500 cursor-not-allowed opacity-60' : occ ? 'bg-white/10 text-zinc-400 cursor-not-allowed opacity-60' : sel ? 'bg-white text-black shadow-lg shadow-white/20' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}>
                                     {String(h).padStart(2, '0')}
                                   </button>
                                 );
@@ -411,20 +469,54 @@ const PlayerDashboard = () => {
                             </div>
                             <div className="flex gap-3 mt-2 text-xs text-slate-500">
                               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/10" />Free</span>
-                              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500/50" />Busy</span>
-                              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />Selected</span>
+                              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-zinc-500" />Past Time</span>
+                              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-zinc-600" />Busy</span>
+                              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white" />Selected</span>
                             </div>
-                            {bookingForm.startTime && <p className="text-sm text-emerald-400 font-semibold mt-2">🕐 {bookingForm.startTime} — {bookingForm.endTime}</p>}
+                            {bookingForm.startTime && <p className="text-sm text-zinc-200 font-semibold mt-2">🕐 {bookingForm.startTime} — {bookingForm.endTime}</p>}
                           </div>
                         )}
 
                         <div className="flex gap-2">
                           <button onClick={() => submitBooking(turf.TurfID)} disabled={!bookingForm.startTime}
-                            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold disabled:opacity-40 shadow-lg shadow-emerald-500/20">
+                            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-white to-zinc-200 text-black text-sm font-semibold disabled:opacity-40 shadow-lg shadow-white/15">
                             💳 Book & Pay
                           </button>
-                          <button onClick={() => { setBookingForm({ turfId: null, bookingDate: '', startTime: '', endTime: '' }); setBusySlots([]); }}
+                          <button onClick={() => { setBookingForm({ turfId: null, bookingDate: '', startTime: '', endTime: '', selectedEquipment: [] }); setBusySlots([]); }}
                             className="px-4 py-2.5 rounded-xl border border-white/10 text-slate-400 text-sm hover:bg-white/5">Cancel</button>
+                        </div>
+
+                        {/* Equipment Add-ons */}
+                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <h4 className="text-sm font-semibold text-white">Equipment Add-ons</h4>
+                            <span className="text-[11px] uppercase tracking-wider text-slate-500">Optional</span>
+                          </div>
+                          {equipmentList.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {equipmentList.map(eq => {
+                                const isSelected = bookingForm.selectedEquipment.some(e => e.equipmentId === eq.equipmentId);
+                                return (
+                                  <button
+                                    key={eq.equipmentId}
+                                    type="button"
+                                    onClick={() => toggleEquipment(eq)}
+                                    className={`flex items-center justify-between p-3 rounded-lg border text-left transition-all ${isSelected ? 'bg-white/10 border-white/40' : 'bg-arena-950 border-white/10 hover:border-white/20'}`}
+                                  >
+                                    <div>
+                                      <p className={`text-sm font-medium ${isSelected ? 'text-zinc-200' : 'text-slate-300'}`}>{eq.name}</p>
+                                      <p className="text-xs text-slate-500">+Rs. {eq.pricePerHour}</p>
+                                    </div>
+                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-white bg-white' : 'border-slate-500'}`}>
+                                      {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-500">No equipment add-ons are available right now.</p>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -435,7 +527,8 @@ const PlayerDashboard = () => {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
               {turfs.length === 0 && <p className="text-slate-500 col-span-full text-center py-12">No venues found matching your criteria.</p>}
             </div>
 
@@ -457,44 +550,14 @@ const PlayerDashboard = () => {
           <div className="animate-fade-in-up">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {publicGames.map(game => (
-                <div key={game.BookingID} className="glass rounded-2xl p-5 hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{game.TurfName}</h3>
-                      <p className="text-sm text-slate-400">Hosted by <span className="text-emerald-400">{game.HostName}</span></p>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">{game.SportType}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-slate-300 mb-4">
-                    <span className="flex items-center gap-1">📅 {game.BookingDate}</span>
-                    <span className="flex items-center gap-1">🕐 {game.StartTime?.substring(0,5)} — {game.EndTime?.substring(0,5)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                          {Array.from({ length: Math.min(game.CurrentPlayers, 4) }).map((_, i) => (
-                            <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 border-2 border-arena-900 flex items-center justify-center text-[10px] text-white font-bold">P</div>
-                          ))}
-                        </div>
-                        <span className="text-xs text-slate-400">{game.CurrentPlayers}/{game.MaxPlayers} players</span>
-                      </div>
-                      <div className="w-32 h-1.5 bg-white/10 rounded-full mt-1.5 overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${(game.CurrentPlayers / game.MaxPlayers) * 100}%` }} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openChatSidebar(game.HostUserID, game.HostName, 'Captain')}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all flex items-center gap-1.5">
-                        💬 Chat Captain
-                      </button>
-                      <button onClick={() => joinGame(game.BookingID)}
-                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500 transition-all">
-                        Join Game
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <GameCard 
+                  key={game.BookingID} 
+                  game={game} 
+                  isJoined={game.HasJoined} 
+                  onJoin={joinGame} 
+                  onLeave={leaveGame} 
+                  onChat={() => openChatSidebar(null, game.TurfName + ' Squad', 'SQUAD', 'B_' + game.BookingID)} 
+                />
               ))}
               {publicGames.length === 0 && (
                 <p className="text-slate-500 col-span-full text-center py-12">No public games available right now. Check back soon!</p>
@@ -506,42 +569,52 @@ const PlayerDashboard = () => {
         {/* ═══ TAB: My Bookings ═══ */}
         {activeTab === 'bookings' && (
           <div className="animate-fade-in-up space-y-3">
-            {myBookings.map(b => (
-              <div key={b.BookingID} className="glass rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-white font-semibold">{b.TurfName}</h3>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${b.Status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>{b.Status}</span>
-                    {b.PaymentStatus === 'PAID' && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400">PAID</span>}
-                  </div>
-                  <p className="text-sm text-slate-400">📅 {b.BookingDate} &nbsp; 🕐 {b.StartTime?.substring(0,5)} — {b.EndTime?.substring(0,5)}</p>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  {b.Status === 'CONFIRMED' && !isPastBooking(b) && (
-                    <button onClick={() => cancelBooking(b.BookingID)} className="px-4 py-2 rounded-lg border border-rose-500/30 text-rose-400 text-sm hover:bg-rose-500/10 transition-all">Cancel</button>
-                  )}
-                  {b.Visibility === 'PUBLIC' && !isPastBooking(b) && b.Status === 'CONFIRMED' && (
-                    <button onClick={() => setActiveChatBookingId(b.BookingID)} className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/20 hover:from-indigo-400 hover:to-indigo-500 transition-all flex items-center gap-1.5">
-                      💬 Squad Chat
-                    </button>
-                  )}
-                  {b.Status === 'CONFIRMED' && isPastBooking(b) && (
-                    <button onClick={() => { setReviewingBooking(b); setReviewRating(0); setReviewText(''); }}
-                      className="px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition-all">
-                      ⭐ Leave Review
-                    </button>
-                  )}
-                </div>
-              </div>
+            {/* Kinetic Filter Bar */}
+            <div className="flex gap-2 mb-6">
+              {['UPCOMING', 'COMPLETED', 'CANCELLED'].map(filter => (
+                <button
+                  key={filter}
+                  onClick={() => setBookingFilter(filter)}
+                  className={`px-6 py-2 font-black font-space uppercase text-sm border-2 transition-colors ${
+                    bookingFilter === filter
+                      ? 'bg-white border-white text-black'
+                      : 'border-white/20 text-white hover:border-white/50 hover:text-white'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+
+            {myBookings
+              .filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+              })
+              .map(b => (
+              <BookingPoster 
+                key={b.BookingID} 
+                booking={b} 
+                onCancel={cancelBooking} 
+                onChat={() => openChatSidebar(null, b.TurfName + ' Squad', 'SQUAD', 'B_' + b.BookingID)} 
+                roleColor="emerald" 
+              />
             ))}
-            {myBookings.length === 0 && <p className="text-slate-500 text-center py-12">No bookings yet. Browse turfs to get started!</p>}
+            {myBookings.filter(b => {
+                if (bookingFilter === 'CANCELLED') return b.Status === 'CANCELLED';
+                const isPast = new Date(`${b.BookingDate}T${b.StartTime}`) < new Date();
+                if (bookingFilter === 'COMPLETED') return isPast && b.Status !== 'CANCELLED';
+                return !isPast && b.Status !== 'CANCELLED';
+            }).length === 0 && <EmptyBookings />}
           </div>
         )}
 
         {/* ═══ TAB: My Wallet ═══ */}
         {activeTab === 'wallet' && (
           <div className="animate-fade-in-up">
-            <div className="glass rounded-2xl overflow-hidden border border-emerald-500/10">
+            <div className="glass rounded-2xl overflow-hidden border border-white/15">
               <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
                 <div>
                   <h2 className="text-xl font-bold text-white">Transaction History</h2>
@@ -565,14 +638,14 @@ const PlayerDashboard = () => {
                         <td className="px-6 py-4">{t.description}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${
-                            t.type === 'TOP_UP' ? 'bg-emerald-500/10 text-emerald-400' :
-                            t.type === 'REFUND' ? 'bg-amber-500/10 text-amber-400' :
-                            'bg-rose-500/10 text-rose-400'
+                            t.type === 'TOP_UP' ? 'bg-white/10 text-zinc-200' :
+                            t.type === 'REFUND' ? 'bg-white/10 text-zinc-300' :
+                            'bg-white/10 text-zinc-400'
                           }`}>
                             {t.type}
                           </span>
                         </td>
-                        <td className={`px-6 py-4 text-right font-bold ${['TOP_UP', 'REFUND'].includes(t.type) ? 'text-emerald-400' : 'text-white'}`}>
+                        <td className={`px-6 py-4 text-right font-bold ${['TOP_UP', 'REFUND'].includes(t.type) ? 'text-zinc-200' : 'text-white'}`}>
                           {['TOP_UP', 'REFUND'].includes(t.type) ? '+' : '-'} Rs. {t.amount}
                         </td>
                       </tr>
