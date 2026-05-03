@@ -7,7 +7,7 @@ public class DBFix {
     public static void main(String[] args) {
         String url = "jdbc:mysql://localhost:3306/ArenaHub";
         String user = "root";
-        String password = "";
+        String password = "liomessi10";
 
         String[] statements = {
                 "ALTER TABLE Users ADD COLUMN Status VARCHAR(20) DEFAULT 'ACTIVE'",

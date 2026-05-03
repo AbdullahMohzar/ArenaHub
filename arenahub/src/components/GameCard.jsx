@@ -1,4 +1,5 @@
 import React from 'react';
+import ScoreboardNumber from './ScoreboardNumber';
 
 const GameCard = ({ game, onJoin, onLeave, onChat, isJoined }) => {
   return (
@@ -11,7 +12,11 @@ const GameCard = ({ game, onJoin, onLeave, onChat, isJoined }) => {
           <p className="text-sm font-mono text-slate-400 uppercase mt-1">HOST: <span className="text-white">{game.HostName}</span></p>
         </div>
         <div className="text-right">
-          <div className="text-xl font-black font-space tracking-tighter text-emerald-400">RS.{game.PricePerHour}/HR</div>
+          <div className="text-xl font-black font-space tracking-tighter text-emerald-400 flex items-center justify-end gap-1">
+            <span>RS.</span>
+            <ScoreboardNumber value={game.PricePerHour} className="text-emerald-300" />
+            <span>/HR</span>
+          </div>
           <div className="text-xs font-mono text-slate-500 uppercase mt-1 border border-white/10 px-2 py-0.5 inline-block">{game.SportType}</div>
         </div>
       </div>
@@ -24,7 +29,13 @@ const GameCard = ({ game, onJoin, onLeave, onChat, isJoined }) => {
         </div>
         <div>
           <div className="text-xs font-mono text-slate-500 uppercase">SQUAD</div>
-          <div className="text-sm font-bold text-white">👤 {game.CurrentPlayers} / {game.MaxPlayers} JOINED</div>
+          <div className="text-sm font-bold text-white flex items-center gap-1">
+            <span>👤</span>
+            <ScoreboardNumber value={game.CurrentPlayers} className="text-white" />
+            <span>/</span>
+            <ScoreboardNumber value={game.MaxPlayers} className="text-white" />
+            <span>JOINED</span>
+          </div>
           <div className="w-full h-1.5 bg-white/10 rounded-none mt-1.5 overflow-hidden">
             <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(game.CurrentPlayers / game.MaxPlayers) * 100}%` }} />
           </div>
