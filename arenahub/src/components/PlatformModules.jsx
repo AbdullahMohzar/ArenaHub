@@ -33,7 +33,7 @@ const modules = [
     num: '01',
     title: 'VENUE\nDISCOVERY',
     desc: 'Find turfs by sport, location, surface type, and availability. Real-time listings with photos, pricing, and reviews.',
-    color: '#3f3f46',
+    color: '#5C939F',
     icon: (
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <circle cx="12" cy="12" r="5" fill="currentColor" opacity="0.9"/>
@@ -48,7 +48,7 @@ const modules = [
     num: '02',
     title: 'SLOT\nBOOKING',
     desc: 'Reserve time slots in seconds. No phone calls, no back-and-forth. Instant confirmation with calendar sync.',
-    color: '#52525b',
+    color: '#ED6D40',
     icon: (
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <rect x="8" y="8" width="32" height="32" rx="6" stroke="currentColor" strokeWidth="2.5" fill="none" opacity="0.8"/>
@@ -62,7 +62,7 @@ const modules = [
     num: '03',
     title: 'CAPTAIN\nTOOLS',
     desc: 'Manage your squad, send invites, track attendance, and split costs. Everything a captain needs in one place.',
-    color: '#71717a',
+    color: '#FFFFFF',
     icon: (
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <circle cx="24" cy="14" r="7" fill="currentColor" opacity="0.9"/>
@@ -78,7 +78,7 @@ const modules = [
     num: '04',
     title: 'PLAYER\nNETWORK',
     desc: 'Join games, find teammates, build your profile. Connect with players who match your skill level and schedule.',
-    color: '#a1a1aa',
+    color: '#3B82F6',
     icon: (
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <path d="M24 8L28 20H40L30 28L34 40L24 32L14 40L18 28L8 20H20L24 8Z" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.8"/>
@@ -90,7 +90,7 @@ const modules = [
     num: '05',
     title: 'OWNER\nDASHBOARD',
     desc: 'List turfs, set dynamic pricing, manage bookings, and track revenue. Full control over your sports business.',
-    color: '#d4d4d8',
+    color: '#10B981',
     icon: (
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <rect x="10" y="6" width="28" height="36" rx="4" stroke="currentColor" strokeWidth="2.5" fill="none" opacity="0.8"/>
@@ -105,7 +105,7 @@ const modules = [
     num: '06',
     title: 'MESSAGING &\nSCHEDULING',
     desc: 'Built-in chat, automated reminders, and shared calendars. Keep everyone aligned without leaving the app.',
-    color: '#e4e4e7',
+    color: '#F59E0B',
     icon: (
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <rect x="6" y="10" width="36" height="28" rx="6" stroke="currentColor" strokeWidth="2.5" fill="none" opacity="0.8"/>

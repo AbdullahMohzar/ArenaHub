@@ -42,6 +42,25 @@ html[data-page="app"] {
   --color-zinc-800: #111111;
 }
 
+/* Home page background restoration: Use the stadium theme background but keep the WQF palette base */
+html[data-page="home"] body {
+  font-family: var(--wqf-sans) !important;
+  background-color: var(--wqf-bg) !important;
+  color: var(--wqf-ink) !important;
+  background-image:
+    repeating-linear-gradient(
+      -18deg,
+      transparent,
+      transparent 56px,
+      rgba(255, 255, 255, 0.012) 56px,
+      rgba(255, 255, 255, 0.012) 57px
+    ),
+    radial-gradient(ellipse 130% 90% at 50% 115%, rgba(255, 255, 255, 0.03), transparent 52%),
+    radial-gradient(ellipse 100% 70% at 0% -15%, rgba(255, 255, 255, 0.04), transparent 58%),
+    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(255, 255, 255, 0.03), transparent 50%) !important;
+  background-attachment: fixed !important;
+}
+
 
 /* ═══════════════════════════════════════════════════
    ArenaHub — Stadium / pitch sports theme
@@ -130,12 +149,6 @@ body {
   color: #f0ede8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-html[data-page="home"] body {
-  font-family: var(--wqf-sans);
-  background-color: var(--wqf-bg);
-  color: var(--wqf-ink);
 }
 
 #root {

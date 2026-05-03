@@ -251,7 +251,7 @@ export default function FeaturesCarousel() {
               key={f.id}
               className="group relative flex-shrink-0 w-[340px] md:w-[400px] h-[520px] md:h-[580px] mx-3 first:ml-0 last:mr-12 rounded-[24px] overflow-hidden scroll-snap-align-start transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
               style={{
-                backgroundColor: isHovered ? '#0a0a0a' : '#e8e8e8',
+                backgroundColor: isHovered ? f.color : '#e8e8e8',
                 transform: isHovered ? 'scale(1.02)' : 'scale(1)',
               }}
               onMouseEnter={() => setHoveredCard(f.id)}
