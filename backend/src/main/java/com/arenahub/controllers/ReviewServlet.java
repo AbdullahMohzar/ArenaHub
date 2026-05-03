@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
 import com.arenahub.utils.DatabaseConnection;
+import com.arenahub.utils.UploadPaths;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -117,9 +118,13 @@ public class ReviewServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
 
         try {
-            int userId = 0, turfId = 0, rating = 0, bookingId = 0;
-            String reviewText = "";
             List<String> imageUrls = new ArrayList<>();
+
+            final int userId;
+            final int turfId;
+            final int rating;
+            final int bookingId;
+            final String reviewText;
 
             if (req.getContentType() != null && req.getContentType().toLowerCase().startsWith("multipart/form-data")) {
                 // Multipart: form fields + images
@@ -130,15 +135,15 @@ public class ReviewServlet extends HttpServlet {
                 reviewText = req.getParameter("reviewText") != null ? req.getParameter("reviewText") : "";
 
                 // Save uploaded images
-                String uploadPath = "D:/ArenaHub/uploads/reviews";
-                File uploadDir = new File(uploadPath);
+                File uploadDir = UploadPaths.resolveUploadDir(req.getServletContext(), "reviews");
                 if (!uploadDir.exists()) uploadDir.mkdirs();
+                String uploadPath = uploadDir.getAbsolutePath();
 
                 for (Part part : req.getParts()) {
                     if ("images".equals(part.getName()) && part.getSize() > 0 && part.getContentType() != null && part.getContentType().startsWith("image/")) {
                         String fileName = UUID.randomUUID().toString() + "_" + getFileName(part);
                         part.write(uploadPath + File.separator + fileName);
-                        imageUrls.add("/uploads/reviews/" + fileName);
+                        imageUrls.add(UploadPaths.resolvePublicUrl("reviews", fileName));
                     }
                 }
             } else {

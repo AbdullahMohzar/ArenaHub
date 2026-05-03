@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
 import com.arenahub.utils.DatabaseConnection;
+import com.arenahub.utils.UploadPaths;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -97,12 +98,12 @@ public class TurfServlet extends HttpServlet {
             try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
                 for (int i = 0; i < params.size(); i++) {
                     Object p = params.get(i);
-                    if (p instanceof String) {
-                        stmt.setString(i + 1, (String) p);
-                    } else if (p instanceof Double) {
-                        stmt.setDouble(i + 1, (Double) p);
-                    } else if (p instanceof Integer) {
-                        stmt.setInt(i + 1, (Integer) p);
+                    switch (p) {
+                        case String value -> stmt.setString(i + 1, value);
+                        case Double value -> stmt.setDouble(i + 1, value);
+                        case Integer value -> stmt.setInt(i + 1, value);
+                        default -> {
+                        }
                     }
                 }
 
@@ -181,47 +182,42 @@ public class TurfServlet extends HttpServlet {
             String primaryImageUrl = null;
             List<String> galleryUrls = new ArrayList<>();
 
-            // Handle Multipart
             if (req.getContentType() != null && req.getContentType().toLowerCase().startsWith("multipart/form-data")) {
                 String ownerIdStr = req.getParameter("ownerId");
                 if (ownerIdStr != null) ownerId = Integer.parseInt(ownerIdStr);
-                
+
                 name = req.getParameter("name");
                 sportType = req.getParameter("sportType");
-                
+
                 String priceStr = req.getParameter("pricePerHour");
                 if (priceStr != null) price = Double.parseDouble(priceStr);
-                
+
                 location = req.getParameter("location") != null ? req.getParameter("location") : "";
                 description = req.getParameter("description") != null ? req.getParameter("description") : "";
-                
-                // Create upload directory
-                String uploadPath = "D:/ArenaHub/uploads/turfs";
-                File uploadDir = new File(uploadPath);
+
+                File uploadDir = UploadPaths.resolveUploadDir(req.getServletContext(), "turfs");
                 if (!uploadDir.exists()) uploadDir.mkdirs();
-                
-                // Handle multiple image parts
+                String uploadPath = uploadDir.getAbsolutePath();
+
                 for (Part part : req.getParts()) {
                     if ("images".equals(part.getName()) && part.getSize() > 0 && part.getContentType() != null && part.getContentType().startsWith("image/")) {
                         String fileName = UUID.randomUUID().toString() + "_" + getFileName(part);
                         part.write(uploadPath + File.separator + fileName);
-                        String url = "/uploads/turfs/" + fileName;
+                        String url = UploadPaths.resolvePublicUrl("turfs", fileName);
                         galleryUrls.add(url);
                         if (primaryImageUrl == null) primaryImageUrl = url;
                     }
                 }
-                
-                // Fallback: also check for single 'image' part (backward compat)
+
                 Part singleImagePart = req.getPart("image");
                 if (singleImagePart != null && singleImagePart.getSize() > 0 && singleImagePart.getContentType() != null && singleImagePart.getContentType().startsWith("image/")) {
                     String fileName = UUID.randomUUID().toString() + "_" + getFileName(singleImagePart);
                     singleImagePart.write(uploadPath + File.separator + fileName);
-                    String url = "/uploads/turfs/" + fileName;
+                    String url = UploadPaths.resolvePublicUrl("turfs", fileName);
                     galleryUrls.add(url);
                     if (primaryImageUrl == null) primaryImageUrl = url;
                 }
-                
-                // Check if this is an update or create
+
                 String action = req.getParameter("action");
                 if ("FULL_UPDATE".equals(action)) {
                     int turfId = Integer.parseInt(req.getParameter("turfId"));
@@ -326,7 +322,7 @@ public class TurfServlet extends HttpServlet {
 
             try (Connection conn = DatabaseConnection.getConnection()) {
                 switch (action) {
-                    case "PRICING": {
+                    case "PRICING" -> {
                         double multiplier = json.get("weekendPriceMultiplier").getAsDouble();
                         String sql = "UPDATE Turfs SET WeekendPriceMultiplier = ? WHERE TurfID = ?";
                         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -334,18 +330,16 @@ public class TurfServlet extends HttpServlet {
                             stmt.setInt(2, turfId);
                             stmt.executeUpdate();
                         }
-                        break;
                     }
-                    case "FULL_UPDATE": {
+                    case "FULL_UPDATE" -> {
                         String name = json.get("name").getAsString();
                         String sportType = json.get("sportType").getAsString();
                         double price = json.get("pricePerHour").getAsDouble();
                         String location = json.get("location").getAsString();
                         String description = json.get("description").getAsString();
                         handleFullUpdate(conn, turfId, name, sportType, price, location, description, null);
-                        break;
                     }
-                    case "MAINTENANCE": {
+                    case "MAINTENANCE" -> {
                         String start = (json.has("start") && !json.get("start").isJsonNull()) ? json.get("start").getAsString() : null;
                         String end = (json.has("end") && !json.get("end").isJsonNull()) ? json.get("end").getAsString() : null;
                         String sqlMaint = "UPDATE Turfs SET MaintenanceLockStart = ?, MaintenanceLockEnd = ?, Status = ? WHERE TurfID = ?";
@@ -356,9 +350,8 @@ public class TurfServlet extends HttpServlet {
                             stmt.setInt(4, turfId);
                             stmt.executeUpdate();
                         }
-                        break;
                     }
-                    case "EDIT": {
+                    case "EDIT" -> {
                         String editName = json.get("name").getAsString();
                         String editSportType = json.get("sportType").getAsString();
                         String sqlEdit = "UPDATE Turfs SET Name = ?, SportType = ? WHERE TurfID = ?";
@@ -368,9 +361,8 @@ public class TurfServlet extends HttpServlet {
                             stmt.setInt(3, turfId);
                             stmt.executeUpdate();
                         }
-                        break;
                     }
-                    case "REMOVE_TURF_IMAGE": {
+                    case "REMOVE_TURF_IMAGE" -> {
                         Object uidAttr = req.getAttribute("validatedUserId");
                         if (uidAttr == null) {
                             resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -438,6 +430,8 @@ public class TurfServlet extends HttpServlet {
                         resp.setStatus(HttpServletResponse.SC_OK);
                         resp.getWriter().write("{\"message\":\"Image removed\"}");
                         return;
+                    }
+                    default -> {
                     }
                 }
 

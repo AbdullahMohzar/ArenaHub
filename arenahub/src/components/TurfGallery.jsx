@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MagneticButton } from './KineticPrimitive';
+import { resolveUploadImageUrl } from './VenueImageCarousel';
 
 const API = 'http://localhost:8080';
 
@@ -31,6 +32,8 @@ const TurfGallery = ({ turf, images, reviews, onBook }) => {
 
   const mainImage = images.length > 0 ? images[activeImage] : turf.ImageURL;
   const thumbnails = images.length > 0 ? images : [turf.ImageURL];
+  const mainImageSrc = resolveUploadImageUrl(mainImage, API, 'turfs');
+  const thumbnailSrcs = thumbnails.map((img) => resolveUploadImageUrl(img, API, 'turfs'));
 
   return (
     <div className="w-full bg-zinc-950 border-2 border-zinc-800">
@@ -42,7 +45,7 @@ const TurfGallery = ({ turf, images, reviews, onBook }) => {
           <AnimatePresence mode="wait">
             <motion.img
               key={activeImage}
-              src={`${API}${mainImage}`}
+              src={mainImageSrc}
               alt="Turf"
               initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -70,13 +73,13 @@ const TurfGallery = ({ turf, images, reviews, onBook }) => {
             <h3 className="text-2xl font-black text-white uppercase border-b-2 border-zinc-800 pb-2">Gallery</h3>
             
             <div className="grid grid-cols-2 gap-2">
-              {thumbnails.map((img, idx) => (
+              {thumbnailSrcs.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImage(idx)}
                   className={`aspect-square border-2 transition-all ${activeImage === idx ? 'border-[var(--role-color)] scale-95' : 'border-zinc-800 hover:border-zinc-600'}`}
                 >
-                  <img src={`${API}${img}`} className="w-full h-full object-cover grayscale hover:grayscale-0" alt={`Thumb ${idx}`} />
+                  <img src={img} className="w-full h-full object-cover grayscale hover:grayscale-0" alt={`Thumb ${idx}`} />
                 </button>
               ))}
             </div>

@@ -93,7 +93,7 @@
                     <path>/</path>
                     <port>8080</port>
                     <staticContextDocbasePaths>
-                        <staticContextDocbasePath>/uploads=d:/ArenaHub/uploads</staticContextDocbasePath>
+                        <staticContextDocbasePath>/uploads=${project.basedir}/../uploads</staticContextDocbasePath>
                     </staticContextDocbasePaths>
                 </configuration>
             </plugin>

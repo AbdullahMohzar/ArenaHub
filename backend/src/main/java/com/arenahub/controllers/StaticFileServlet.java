@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -11,14 +14,19 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.sql.Connection;
-import java.sql.Statement;
 import com.arenahub.utils.DatabaseConnection;
+import com.arenahub.utils.UploadPaths;
 
 @WebServlet(value = "/uploads/*", loadOnStartup = 1)
 public class StaticFileServlet extends HttpServlet {
 
-    private static final String BASE_DIR = "D:/ArenaHub/uploads";
+    private File getBaseDir() {
+        File baseDir = UploadPaths.resolveBaseDir(getServletContext());
+        if (!baseDir.exists()) {
+            baseDir.mkdirs();
+        }
+        return baseDir;
+    }
 
     @Override
     public void init() throws ServletException {
@@ -33,11 +41,14 @@ public class StaticFileServlet extends HttpServlet {
             };
             
             for (String sql : sqls) {
-                try { stmt.execute(sql); } catch (Exception ignored) {}
+                try {
+                    stmt.execute(sql);
+                } catch (SQLException ignored) {
+                }
             }
             System.out.println("Migration v6 executed successfully.");
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (SQLException | RuntimeException e) {
+            System.err.println("Static file migration failed: " + e.getMessage());
         }
     }
 
@@ -70,7 +81,7 @@ public class StaticFileServlet extends HttpServlet {
             pathInfo = pathInfo.substring(1);
         }
 
-        File file = new File(BASE_DIR, pathInfo);
+        File file = new File(getBaseDir(), pathInfo);
         if (!file.exists() || file.isDirectory()) {
             System.err.println("StaticFileServlet: File not found: " + file.getAbsolutePath());
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);

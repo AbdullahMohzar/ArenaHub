@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 
 export const CAROUSEL_INTERVAL_MS = 4500;
 
+export function resolveUploadImageUrl(path, apiBase, folder = 'turfs') {
+  if (!path || !apiBase) return '';
+  const trimmed = String(path).trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  if (trimmed.startsWith('/uploads/')) return `${apiBase}${trimmed}`;
+  if (trimmed.startsWith('/')) return `${apiBase}/uploads/${folder}${trimmed}`;
+  return `${apiBase}/uploads/${folder}/${trimmed}`;
+}
+
 /** Unique absolute image URLs for a turf (primary ImageURL + gallery `images[]`). */
 export function collectTurfImageUrls(t, apiBase) {
   if (!t || !apiBase) return [];
@@ -12,7 +22,7 @@ export function collectTurfImageUrls(t, apiBase) {
     const norm = path.trim();
     if (!norm || seen.has(norm)) return;
     seen.add(norm);
-    out.push(norm.startsWith('http') ? norm : `${apiBase}${norm}`);
+    out.push(resolveUploadImageUrl(norm, apiBase, 'turfs'));
   };
   add(t.ImageURL);
   if (Array.isArray(t.images)) t.images.forEach(add);

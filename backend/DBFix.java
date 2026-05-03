@@ -62,7 +62,7 @@ public class DBFix {
             System.out.println("Migration fix complete!");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Migration fix failed: " + e.getMessage());
         }
     }
 }

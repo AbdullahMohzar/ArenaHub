@@ -41,51 +41,49 @@ public class AdminServlet extends HttpServlet {
 
         String path = req.getPathInfo();
         try (Connection conn = DatabaseConnection.getConnection()) {
-            
-            // GET /api/admin/users
-            if ("/users".equals(path)) {
-                String sql = "SELECT UserID, FullName, Email, UserRole, Status, CreatedAt FROM Users ORDER BY CreatedAt DESC";
-                try (PreparedStatement stmt = conn.prepareStatement(sql);
-                     ResultSet rs = stmt.executeQuery()) {
-                    JsonArray arr = new JsonArray();
-                    while (rs.next()) {
-                        JsonObject u = new JsonObject();
-                        u.addProperty("userId", rs.getInt("UserID"));
-                        u.addProperty("name", rs.getString("FullName"));
-                        u.addProperty("email", rs.getString("Email"));
-                        u.addProperty("role", rs.getString("UserRole"));
-                        u.addProperty("status", rs.getString("Status"));
-                        u.addProperty("createdAt", rs.getString("CreatedAt"));
-                        arr.add(u);
+            switch (path) {
+                case "/users" -> {
+                    String sql = "SELECT UserID, FullName, Email, UserRole, Status, CreatedAt FROM Users ORDER BY CreatedAt DESC";
+                    try (PreparedStatement stmt = conn.prepareStatement(sql);
+                         ResultSet rs = stmt.executeQuery()) {
+                        JsonArray arr = new JsonArray();
+                        while (rs.next()) {
+                            JsonObject u = new JsonObject();
+                            u.addProperty("userId", rs.getInt("UserID"));
+                            u.addProperty("name", rs.getString("FullName"));
+                            u.addProperty("email", rs.getString("Email"));
+                            u.addProperty("role", rs.getString("UserRole"));
+                            u.addProperty("status", rs.getString("Status"));
+                            u.addProperty("createdAt", rs.getString("CreatedAt"));
+                            arr.add(u);
+                        }
+                        resp.getWriter().write(arr.toString());
                     }
-                    resp.getWriter().write(arr.toString());
                 }
-            }
-            // GET /api/admin/disputes (Fetching CANCELLED bookings for refund)
-            else if ("/disputes".equals(path)) {
-                String sql = "SELECT b.BookingID, b.UserID, b.BookingDate, b.Status, b.PaymentStatus, t.Name AS TurfName, t.PricePerHour, u.FullName " +
-                             "FROM Bookings b " +
-                             "JOIN Turfs t ON b.TurfID = t.TurfID " +
-                             "JOIN Users u ON b.UserID = u.UserID " +
-                             "WHERE b.Status = 'CANCELLED' AND b.PaymentStatus = 'PAID' " +
-                             "ORDER BY b.BookingDate DESC";
-                try (PreparedStatement stmt = conn.prepareStatement(sql);
-                     ResultSet rs = stmt.executeQuery()) {
-                    JsonArray arr = new JsonArray();
-                    while (rs.next()) {
-                        JsonObject b = new JsonObject();
-                        b.addProperty("bookingId", rs.getInt("BookingID"));
-                        b.addProperty("userId", rs.getInt("UserID"));
-                        b.addProperty("userName", rs.getString("FullName"));
-                        b.addProperty("turfName", rs.getString("TurfName"));
-                        b.addProperty("date", rs.getString("BookingDate"));
-                        b.addProperty("price", rs.getDouble("PricePerHour")); // Simplified refund logic
-                        arr.add(b);
+                case "/disputes" -> {
+                    String sql = "SELECT b.BookingID, b.UserID, b.BookingDate, b.Status, b.PaymentStatus, t.Name AS TurfName, t.PricePerHour, u.FullName " +
+                                 "FROM Bookings b " +
+                                 "JOIN Turfs t ON b.TurfID = t.TurfID " +
+                                 "JOIN Users u ON b.UserID = u.UserID " +
+                                 "WHERE b.Status = 'CANCELLED' AND b.PaymentStatus = 'PAID' " +
+                                 "ORDER BY b.BookingDate DESC";
+                    try (PreparedStatement stmt = conn.prepareStatement(sql);
+                         ResultSet rs = stmt.executeQuery()) {
+                        JsonArray arr = new JsonArray();
+                        while (rs.next()) {
+                            JsonObject b = new JsonObject();
+                            b.addProperty("bookingId", rs.getInt("BookingID"));
+                            b.addProperty("userId", rs.getInt("UserID"));
+                            b.addProperty("userName", rs.getString("FullName"));
+                            b.addProperty("turfName", rs.getString("TurfName"));
+                            b.addProperty("date", rs.getString("BookingDate"));
+                            b.addProperty("price", rs.getDouble("PricePerHour"));
+                            arr.add(b);
+                        }
+                        resp.getWriter().write(arr.toString());
                     }
-                    resp.getWriter().write(arr.toString());
                 }
-            } else {
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                default -> resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
         } catch (SQLException e) {
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
