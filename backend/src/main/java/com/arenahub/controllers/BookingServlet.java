@@ -250,9 +250,34 @@ public class BookingServlet extends HttpServlet {
             java.time.LocalDate bDate = java.time.LocalDate.parse(bookingDate);
             java.time.LocalTime sTime = java.time.LocalTime.parse(startTime);
             java.time.LocalTime eTime = java.time.LocalTime.parse(endTime);
-            if (bDate.isBefore(java.time.LocalDate.now()) || !sTime.isBefore(eTime)) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalTime now = java.time.LocalTime.now();
+            
+            // Prevent past dates
+            if (bDate.isBefore(today)) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("{\"error\":\"Invalid booking date or time.\"}");
+                resp.getWriter().write("{\"error\":\"Cannot book for a past date\"}");
+                return;
+            }
+            
+            // Prevent already-passed times on today
+            if (bDate.isEqual(today) && sTime.isBefore(now.plusMinutes(30))) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("{\"error\":\"Booking start time must be at least 30 minutes from now\"}");
+                return;
+            }
+            
+            // Validate start time before end time
+            if (!sTime.isBefore(eTime)) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("{\"error\":\"Start time must be before end time\"}");
+                return;
+            }
+            
+            // Validate max players
+            if (maxPlayers <= 0) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("{\"error\":\"Max players must be greater than 0\"}");
                 return;
             }
 
@@ -303,6 +328,16 @@ public class BookingServlet extends HttpServlet {
                             successCount++;
                             try (ResultSet keys = stmt.getGeneratedKeys()) {
                                 if (keys.next()) lastBookingId = keys.getInt(1);
+                            }
+                            
+                            // Automatically add captain (booking creator) to GameParticipants
+                            if (lastBookingId > 0) {
+                                String captainSql = "INSERT INTO GameParticipants (BookingID, UserID, Status) VALUES (?, ?, 'JOINED')";
+                                try (PreparedStatement captainStmt = conn.prepareStatement(captainSql)) {
+                                    captainStmt.setInt(1, lastBookingId);
+                                    captainStmt.setInt(2, userId);
+                                    captainStmt.executeUpdate();
+                                }
                             }
                         }
                     }
