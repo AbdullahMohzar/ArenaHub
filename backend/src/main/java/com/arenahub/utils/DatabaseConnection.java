@@ -3,6 +3,7 @@ package com.arenahub.utils;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import io.github.cdimascio.dotenv.Dotenv;
 
 /**
  * DATABASE CONNECTION UTILITY - Design Patterns Used:
@@ -27,31 +28,40 @@ import java.sql.SQLException;
  *    - Change happens in ONE place
  */
 public class DatabaseConnection {
-    private static final String URL = "jdbc:mysql://localhost:3306/ArenaHub";
-    private static final String USER = "root"; // Update as needed
-    private static final String PASSWORD = "Nisar20067."; // Update as needed
+    
+    // Using dotenv-java to load environment variables pulled from Vercel
+    private static final Dotenv dotenv = Dotenv.configure()
+            .directory("../arenahub") // point to where .env.development.local is
+            .filename(".env.development.local")
+            .ignoreIfMissing()
+            .load();
+    
+    private static final String DATABASE_URL = dotenv.get("DATABASE_URL") != null ? 
+            dotenv.get("DATABASE_URL") : System.getenv("DATABASE_URL");
 
     /**
      * FACTORY METHOD - Creates Connection objects
-     * 
-     * Design Patterns:
-     * • FACTORY PATTERN: Static factory method for creating connections
-     * • ABSTRACTION: Hides MySQL driver initialization from clients
-     * • INDIRECTION: Intermediary between servlet layer and driver layer
-     * 
-     * How it works:
-     * 1. Load MySQL JDBC driver
-     * 2. Establish connection using credentials
-     * 3. Return Connection interface (not driver-specific implementation)
-     * 
-     * Benefit: Servlets call this method without knowing MySQL driver details
      */
     public static Connection getConnection() throws SQLException {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            // Load PostgreSQL JDBC Driver instead of MySQL
+            Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("MySQL JDBC Driver not found", e);
+            throw new RuntimeException("PostgreSQL JDBC Driver not found", e);
         }
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        
+        if (DATABASE_URL == null || DATABASE_URL.isEmpty()) {
+            throw new SQLException("DATABASE_URL environment variable is missing.");
+        }
+        
+        // Convert Neon/Vercel postgres:// or postgresql:// URL to JDBC format
+        String jdbcUrl = DATABASE_URL;
+        if (jdbcUrl.startsWith("postgres://")) {
+            jdbcUrl = jdbcUrl.replaceFirst("postgres://", "jdbc:postgresql://");
+        } else if (jdbcUrl.startsWith("postgresql://")) {
+            jdbcUrl = jdbcUrl.replaceFirst("postgresql://", "jdbc:postgresql://");
+        }
+
+        return DriverManager.getConnection(jdbcUrl);
     }
 }
