@@ -53,7 +53,7 @@ const emptyByVariant = {
  * Card header: empty placeholder, single image, or auto-sliding strip when multiple.
  * @param {'owner'|'player'|'captain'} emptyVariant - placeholder when there are no URLs
  */
-export function VenueImageCarousel({ urls, alt, emptyVariant = 'owner' }) {
+export function VenueImageCarousel({ urls, alt, emptyVariant = 'owner', autoplay = true }) {
   const [idx, setIdx] = useState(0);
   const n = urls.length;
   const urlsKey = urls.join('|');
@@ -63,14 +63,14 @@ export function VenueImageCarousel({ urls, alt, emptyVariant = 'owner' }) {
   }, [urlsKey]);
 
   useEffect(() => {
-    if (n <= 1) return;
+    if (!autoplay || n <= 1) return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (mq.matches) return;
     const id = setInterval(() => {
       setIdx((i) => (i + 1) % n);
     }, CAROUSEL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [n]);
+  }, [n, autoplay]);
 
   if (n === 0) {
     return emptyByVariant[emptyVariant] || emptyByVariant.owner;

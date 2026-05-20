@@ -16,9 +16,45 @@ import com.arenahub.utils.DatabaseConnection;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles HTTP requests for booking calendar display
+ *    - Coordinates between turf owner requests and booking database
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in turf owner booking queries
+ *    - Knows how to fetch bookings specific to an owner
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Simplifies booking calendar display
+ *    - Hides: complex SQL joins, date filtering, status aggregation
+ *    - Owners see simple calendar view, complexity hidden
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - GET strategy: fetch all bookings for a specific turf owner
+ *    - Filters by userId parameter to ensure access control
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - doGet() implements booking retrieval algorithm
+ * 
+ * ✅ PROTECTED VARIATIONS (GRASP):
+ *    - Admin authentication ensures only authorized access
+ *    - Single place for all calendar operations
+ */
+
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request handling and servlet lifecycle capabilities
+ */
 @WebServlet("/api/admin/bookings")
 public class AdminBookingServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private method - hides CORS header configuration from external access
+     * Maintains information hiding by keeping header setup details internal
+     */
     private void setAccessControlHeaders(HttpServletResponse resp) {
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -31,6 +67,14 @@ public class AdminBookingServlet extends HttpServlet {
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /**
+     * UC-13: View Booking Calendar
+     * Allows turf owners to view all bookings for their turfs
+     * 
+     * POLYMORPHISM: Override - doGet() for booking calendar display
+     * INTERFACE: Connection & PreparedStatement provide JDBC abstraction
+     * ABSTRACTION: Calendar query logic hidden behind SQL interface
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);

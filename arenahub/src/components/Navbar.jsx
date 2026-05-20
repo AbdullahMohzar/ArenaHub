@@ -18,8 +18,8 @@ const NAV_CONFIG = {
 
 /* ── ArenaHub logo mark ──────────────────────── */
 const Logo = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
-    <rect x="1" y="1" width="24" height="24" rx="4" stroke="white" strokeWidth="1.5" strokeOpacity="0.7"/>
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true" className="drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">
+    <rect x="1" y="1" width="24" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" strokeOpacity="1" className="text-emerald-400" />
     <path d="M6 19L13 7L20 19" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.9"/>
     <path d="M8.5 14.5H17.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeOpacity="0.5"/>
   </svg>
@@ -51,22 +51,43 @@ const Navbar = () => {
 
   /* ── Scroll detection ─────────────────────── */
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 20);
+    if (!isHome) {
+      setIsScrolled(false);
+      return;
+    }
+
+    const onScroll = () => {
+      const next = window.scrollY > 20;
+      setIsScrolled((current) => (current === next ? current : next));
+    };
+
+    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [isHome]);
 
   /* ── Hero-passed detection ────────────────── */
   useEffect(() => {
+    if (!isHome) {
+      setHeroPassed(false);
+      return;
+    }
+
     const sync = () => {
       const v = document.documentElement.getAttribute('data-home-hero-passed');
       setHeroPassed(v === 'true');
     };
+
     sync();
-    window.addEventListener('scroll', sync, { passive: true });
-    const t = setInterval(sync, 300);
-    return () => { window.removeEventListener('scroll', sync); clearInterval(t); };
-  }, []);
+
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-home-hero-passed'],
+    });
+
+    return () => observer.disconnect();
+  }, [isHome]);
 
   /* ── GSAP pill morph when pill state changes ── */
   useEffect(() => {
@@ -159,11 +180,14 @@ const Navbar = () => {
             {/* Logo */}
             <Link
               to={isLoggedIn ? '/dashboard' : '/'}
-              className="ah-nav-logo"
+              className="ah-nav-logo group"
               aria-label="ArenaHub home"
             >
-              <Logo />
-              <span className="ah-nav-wordmark">ARENAHUB</span>
+              <div className="relative">
+                 <div className="absolute inset-0 bg-emerald-400/20 blur-md rounded-full scale-0 group-hover:scale-150 transition-transform duration-500"></div>
+                 <Logo />
+              </div>
+              <span className="ah-nav-wordmark group-hover:text-emerald-300 transition-colors">ARENAHUB</span>
             </Link>
 
             {/* Desktop links */}
@@ -174,7 +198,7 @@ const Navbar = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`ah-nav-link ${active ? 'ah-nav-link-active' : ''}`}
+                    className={`ah-nav-link ${active ? 'ah-nav-link-active !text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'hover:!text-white'}`}
                   >
                     {item.label}
                   </Link>
@@ -189,16 +213,14 @@ const Navbar = () => {
                   {/* Chat */}
                   {userRole !== 'ADMIN' && (
                     <button
-                      className="ah-icon-btn"
+                      className="ah-icon-btn hover:!bg-emerald-500/10 hover:!border-emerald-500/30 transition-all border border-transparent"
                       id="navbar-chat-button"
                       title="Messages"
                       onClick={() => window.dispatchEvent(new CustomEvent('toggle-chat-sidebar'))}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
+                      <i className="fi fi-rr-comment-alt text-[16px] leading-none mb-0.5"></i>
                       {unreadCount > 0 && (
-                        <span className="ah-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                        <span className="ah-badge !bg-emerald-500 !text-black">{unreadCount > 9 ? '9+' : unreadCount}</span>
                       )}
                     </button>
                   )}
@@ -206,11 +228,11 @@ const Navbar = () => {
                   {/* Profile */}
                   <div className="ah-profile-wrap" ref={profileRef}>
                     <button
-                      className="ah-avatar-btn"
+                      className={`ah-avatar-btn border transition-all ${isProfileOpen ? 'border-emerald-400 bg-emerald-500/10' : 'border-white/10 hover:border-emerald-500/30 hover:bg-emerald-500/5'}`}
                       id="navbar-profile-button"
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
                     >
-                      <span className="ah-avatar">
+                      <span className="ah-avatar !bg-black/40 !text-emerald-400">
                         {(localStorage.getItem('userRole') || 'U')[0].toUpperCase()}
                       </span>
                       <svg
@@ -225,21 +247,25 @@ const Navbar = () => {
                     {isProfileOpen && (
                       <div className="ah-dropdown">
                         <div className="ah-dropdown-header">
-                          <p className="ah-dropdown-role">{userRole}</p>
+                          <p className="ah-dropdown-role flex items-center gap-1 font-bold text-emerald-400">
+                             <i className="fi fi-rr-circle-user text-xs"></i> {userRole}
+                          </p>
                           <p className="ah-dropdown-id">ID: {localStorage.getItem('userId')}</p>
                         </div>
                         <Link
                           to="/dashboard"
                           onClick={() => setIsProfileOpen(false)}
-                          className="ah-dropdown-item"
+                          className="ah-dropdown-item group"
                         >
+                          <i className="fi fi-rr-apps text-emerald-400/70 group-hover:text-emerald-400 transition-colors mr-2"></i>
                           Dashboard
                         </Link>
                         <button
                           id="navbar-logout-button"
                           onClick={handleLogout}
-                          className="ah-dropdown-item ah-dropdown-item-btn"
+                          className="ah-dropdown-item ah-dropdown-item-btn group"
                         >
+                          <i className="fi fi-rr-sign-out-alt text-slate-500 group-hover:text-red-400 transition-colors mr-2"></i>
                           Sign Out
                         </button>
                       </div>
@@ -251,14 +277,14 @@ const Navbar = () => {
                   <Link
                     id="navbar-login-link"
                     to="/login"
-                    className="ah-nav-cta-ghost"
+                    className="ah-nav-cta-ghost hover:!text-emerald-400 hover:!bg-emerald-500/10 transition-colors"
                   >
                     Log in
                   </Link>
                   <Link
                     id="navbar-signup-link"
                     to="/signup"
-                    className="ah-nav-cta-solid"
+                    className="ah-nav-cta-solid !bg-emerald-400 !text-black hover:!bg-emerald-300 hover:shadow-[0_0_20px_rgba(52,211,153,0.4)] transition-all font-bold"
                   >
                     Join
                   </Link>

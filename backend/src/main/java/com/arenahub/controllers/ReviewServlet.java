@@ -25,10 +25,46 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles HTTP requests for venue reviews and ratings
+ *    - Entry point for review submission and retrieval
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in review/rating operations
+ *    - Knows how to store and retrieve reviews with images
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Hides complexity of file upload and image storage
+ *    - Hides database operations for reviews
+ *    - Clients see simple JSON API
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - GET strategy: retrieve all reviews for a turf
+ *    - POST strategy: create new review with optional images
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - doGet() and doPost() override HttpServlet methods
+ * 
+ * ✅ DECORATOR PATTERN (GOF):
+ *    - @MultipartConfig enables multipart form data (file uploads)
+ *    - Without modifying code, framework handles file parsing
+ */
+
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request/response handling and servlet lifecycle capabilities
+ */
 @WebServlet("/api/reviews")
 @MultipartConfig(fileSizeThreshold=1024*1024*2, maxFileSize=1024*1024*10, maxRequestSize=1024*1024*50)
 public class ReviewServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private helper method - encapsulates file name extraction logic
+     * Hides implementation details and reduces code duplication across methods
+     */
     private String getFileName(Part part) {
         for (String cd : part.getHeader("content-disposition").split(";")) {
             if (cd.trim().startsWith("filename")) {
@@ -108,6 +144,11 @@ public class ReviewServlet extends HttpServlet {
         }
     }
 
+    /**
+     * UC-12: Rate a Venue
+     * Allows players and captains to submit ratings and reviews for turfs
+     * Supports optional image uploads for review photos
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);

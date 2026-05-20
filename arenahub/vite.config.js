@@ -12,5 +12,10 @@ export default defineConfig({
     proxy: {
       '/uploads': 'http://localhost:8080'
     }
+  },
+  build: {
+    rollupOptions: {
+      // Lazy loading natively handles code splitting. Add additional rollup options here if needed later.
+    }
   }
 })

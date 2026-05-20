@@ -47,8 +47,6 @@ const MODULES = [
   'Analytics',
 ];
 
-const MARQUEE_TEXT = 'SPORT · BOOK · PLAY · MANAGE · CONNECT · COMPETE · ARENA · TURF · FIELD · ';
-
 /* ── Corner-bracket button (WQF style) ─────────── */
 const BracketBtn = ({ to, children, solid = false, id }) => (
   <Link
@@ -277,20 +275,20 @@ const Home = () => {
               <span className="ah-hero-line-wrap"><span className="ah-hero-line">THAT</span></span>
             </div>
             <div className="ah-hero-bottom-right">
-              <span className="ah-hero-line-wrap"><span className="ah-hero-line">PULL THE</span></span>
-              <span className="ah-hero-line-wrap"><span className="ah-hero-line">FUTURE FORWARD</span></span>
+              <span className="ah-hero-line-wrap"><span className="ah-hero-line">DOMINATE</span></span>
+              <span className="ah-hero-line-wrap"><span className="ah-hero-line">THE TURF</span></span>
             </div>
           </h1>
 
           <div className="ah-hero-footer">
             <div className="ah-hero-cta">
-              <BracketBtn to="/signup" id="home-cta-join">CONTACT US</BracketBtn>
+              <BracketBtn to="/signup" id="home-cta-join">BOOK NOW</BracketBtn>
             </div>
             <div className="ah-hero-sub-wrap">
               <p className="ah-hero-sub">
-                ARENAHUB IS A PLATFORM THAT EMPOWERS PLAYERS AND CAPTAINS
-                TO PULL THE FUTURE FORWARD. FAST BOOKING. CONNECTIONS.
-                MANAGEMENT. WE DELIVER MORE THAN VENUES—WE CREATE THE INFRASTRUCTURE FOR PLAY.
+                ARENAHUB IS THE ULTIMATE PLATFORM THAT EMPOWERS PLAYERS AND CAPTAINS 
+                TO DOMINATE THE GAME. INSTANT BOOKING. MATCHMAKING. 
+                TEAM MANAGEMENT. WE DELIVER MORE THAN GROUNDS—WE CREATE THE BATTLEGROUND FOR PASSIONATE PLAY.
               </p>
               <div className="ah-hero-logo-mark">
                 <svg width="36" height="36" viewBox="0 0 26 26" fill="none">
@@ -303,12 +301,6 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Marquee strip */}
-        <div className="ah-marquee" aria-hidden="true">
-          <div className="ah-marquee-track">
-            <span>{MARQUEE_TEXT.repeat(6)}</span>
-          </div>
-        </div>
       </section>
 
       {/* ════════ STATS ════════ */}

@@ -2,7 +2,10 @@ import React from 'react';
 
 const GameCard = ({ game, onJoin, onLeave, onChat, isJoined }) => {
   return (
-    <div className="glass rounded-none p-5 border-2 border-white/5 hover:border-white/30 transition-all group relative overflow-hidden bg-arena-900">
+    <div
+      className="glass rounded-none p-5 border-2 border-white/5 hover:border-white/30 transition-all group relative overflow-hidden bg-arena-900"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '260px 260px' }}
+    >
       <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('/noise.png')]" />
       
       <div className="relative z-10 flex justify-between items-start mb-4">

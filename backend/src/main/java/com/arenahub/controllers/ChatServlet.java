@@ -18,6 +18,29 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles HTTP requests for chat room management
+ *    - Coordinates between chat requests and chat database
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in chat rooms and communication
+ *    - Knows chat creation, listing, and member management
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Simplifies chat operations
+ *    - Hides: room creation, member queries, database transactions
+ *    - Clients see simple chat endpoints
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - GET strategy: retrieve chat rooms and history
+ *    - POST strategy: create new chat room
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - doGet() and doPost() implement chat algorithms
+ */
 @WebServlet("/api/chat/*")
 public class ChatServlet extends HttpServlet {
 

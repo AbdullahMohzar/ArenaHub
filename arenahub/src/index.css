@@ -431,16 +431,6 @@ html[data-cursor-hover="true"] .wqf-cursor-ring {
   transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.brutal-card:hover {
-  background-color: var(--role-color);
-  border-color: var(--role-color);
-  color: #000 !important;
-}
-
-.brutal-card:hover * {
-  color: #000 !important;
-}
-
 .brutal-btn {
   background-color: transparent;
   border: 2px solid var(--role-color);

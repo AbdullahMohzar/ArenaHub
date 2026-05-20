@@ -8,8 +8,8 @@
   --ah-ink: #f0ede8;
   --ah-muted: rgba(240, 237, 232, 0.55);
   --ah-border: rgba(255, 255, 255, 0.09);
-  --ah-blue: #d4d4d4;
-  --ah-blue-glow: rgba(255, 255, 255, 0.12);
+  --ah-blue: #34d399; /* emerald-400 */
+  --ah-blue-glow: rgba(52, 211, 153, 0.12); /* emerald-400 with 12% opacity */
   --ah-serif: 'Fraunces', ui-serif, Georgia, serif;
   --ah-sans: 'Inter', system-ui, sans-serif;
 }
@@ -498,7 +498,7 @@ html[data-page="home"] body {
   width: 700px;
   height: 700px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 142, 247, 0.12) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.12) 0%, transparent 65%);
   pointer-events: none;
   z-index: 0;
 }
@@ -517,7 +517,7 @@ html[data-page="home"] body {
 .ah-canvas-fallback {
   width: 100%;
   height: 100vh;
-  background: radial-gradient(circle at 50% 50%, rgba(79, 142, 247, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(52, 211, 153, 0.06) 0%, transparent 70%);
 }
 
 /* Overlay Content */
@@ -912,7 +912,7 @@ html[data-page="home"] body {
 }
 
 .ah-ethos-card:hover {
-  background: rgba(79, 142, 247, 0.07);
+  background: rgba(52, 211, 153, 0.06);
 }
 
 .ah-ethos-header {
@@ -978,7 +978,7 @@ html[data-page="home"] body {
 }
 
 .ah-feature-card:hover {
-  background: rgba(79, 142, 247, 0.06);
+  background: rgba(52, 211, 153, 0.06);
 }
 
 .ah-feature-num {

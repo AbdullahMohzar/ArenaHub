@@ -9,6 +9,7 @@ import CursorFollower from './CursorFollower';
 
 const Layout = () => {
   const location = useLocation();
+  const isHome = location.pathname === '/';
 
   useEffect(() => {
     AOS.init({
@@ -29,26 +30,33 @@ const Layout = () => {
       document.documentElement.removeAttribute('data-role');
     }
 
-    document.documentElement.setAttribute('data-page', location.pathname === '/' ? 'home' : 'app');
-    AOS.refreshHard();
+    document.documentElement.setAttribute('data-page', isHome ? 'home' : 'app');
+
+    if (isHome) {
+      AOS.refreshHard();
+    }
   }, [location.pathname]);
 
   return (
     <>
       <Navbar />
-      {location.pathname === '/' ? <CursorFollower /> : null}
+      {isHome ? <CursorFollower /> : null}
       {/* The Kinetic Sidebar replaces the old ChatSidebar or works alongside it. 
           For now, we just include the old one, but we'll apply kinetic styles to it soon. */}
       <ChatSidebar />
       <main className="pt-16 min-h-screen relative z-10">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            className="min-h-[calc(100vh-4rem)]"
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        {isHome ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              className="min-h-[calc(100vh-4rem)]"
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <Outlet />
+        )}
       </main>
     </>
   );

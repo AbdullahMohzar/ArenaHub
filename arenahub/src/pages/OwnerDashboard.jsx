@@ -21,6 +21,7 @@ const OwnerDashboard = () => {
   const [myTurfs, setMyTurfs] = useState([]);
   const [ownerBookings, setOwnerBookings] = useState([]);
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  const [ownerWallet, setOwnerWallet] = useState({ balance: 0, transactions: [] });
 
   // New Venue Form
   const [showVenueForm, setShowVenueForm] = useState(false);
@@ -137,6 +138,16 @@ const OwnerDashboard = () => {
 
         setOwnerBookings(data);
         calculateRevenue(data);
+        fetchWallet();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchWallet = async () => {
+    try {
+      const res = await fetch(`${API}/api/wallet?userId=${userId}`, { headers });
+      if (res.ok) {
+        setOwnerWallet(await res.json());
       }
     } catch (err) { console.error(err); }
   };
@@ -161,6 +172,7 @@ const OwnerDashboard = () => {
     if (!userId) return navigate('/login');
     fetchTurfs();
     fetchBookings();
+    fetchWallet();
     const poll = setInterval(fetchBookings, 30000); // 30s polling
     return () => clearInterval(poll);
   }, []);
@@ -361,25 +373,68 @@ const OwnerDashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-end gap-8 mb-12">
-          <div>
-            <p className="sports-kicker mb-2">Facility ops</p>
-            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white uppercase leading-[0.95] tracking-wide">
-              Stadium <span className="text-accent">control</span>
-            </h1>
-            <p className="text-slate-400 mt-4 max-w-md text-sm leading-relaxed">Your venues, your lights — bookings, locks, and surge pricing from the owner&apos;s box.</p>
+        <div className="relative mb-12 p-8 lg:p-10 bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl group">
+          {/* Decorative glowing background elements */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-emerald-500/20 transition-all duration-700"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-10">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
+                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                 <p className="text-[10px] font-black text-emerald-400 tracking-[0.2em] uppercase">Facility Ops</p>
+              </div>
+              <h1 className="font-display text-5xl sm:text-6xl md:text-7xl text-white font-extrabold uppercase leading-[0.95] tracking-wide drop-shadow-md">
+                Stadium <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-white">Control</span>
+              </h1>
+              <p className="text-slate-400 mt-5 max-w-lg text-sm sm:text-base leading-relaxed font-medium">
+                Your venues, your lights. Manage bookings, schedule locks, and trigger surge pricing right from the owner&apos;s box.
+              </p>
+            </div>
+            
+            <div className="shrink-0 flex items-center">
+              <div className="glass p-6 md:p-8 min-w-[280px] rounded-3xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden group/card hover:border-emerald-500/40 transition-colors duration-500">
+                <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent pointer-events-none"></div>
+                <div className="relative z-10 flex flex-col items-center lg:items-start text-center lg:text-left">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">
+                        <i className="fi fi-rr-wallet text-emerald-400/80 text-sm"></i>
+                        <span>This Month's Gate</span>
+                    </div>
+                    <span className="text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-sm flex items-baseline gap-1 group-hover/card:scale-105 transition-transform duration-300">
+                       <span className="text-2xl text-emerald-400/80 font-bold mr-1">Rs.</span> 
+                       {monthlyRevenue.toLocaleString('en-IN')}
+                    </span>
+                    <div className="w-full mt-5 h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-400 to-white/80 w-1/3 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)]"></div>
+                    </div>
+                    <span className="block mt-3 text-[10px] text-slate-500 font-semibold tracking-wider">REVENUE TRACKER ACTIVE</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="brutal-card p-6 min-w-[240px] border-accent/40">
-            <span className="text-[10px] font-display text-slate-500 uppercase tracking-[0.2em] mb-2 block">This month gate</span>
-            <span className="text-4xl font-display text-accent tracking-wide">Rs. {monthlyRevenue.toLocaleString('en-IN')}</span>
+
+          <div className="relative z-10 mt-6 flex flex-wrap gap-3">
+            <div className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold">Owner Wallet</p>
+              <p className="text-white text-xl font-black mt-1">Rs. {ownerWallet.balance?.toLocaleString('en-IN') || 0}</p>
+            </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-12">
-          <button onClick={() => setActiveTab('venues')} className={`px-6 py-3 font-display text-sm uppercase tracking-[0.12em] transition-all border-2 ${activeTab === 'venues' ? 'bg-accent text-black border-accent shadow-[0_0_28px_-6px_var(--role-color)]' : 'text-white border-white/15 hover:border-accent/80 hover:text-accent bg-black/20'}`}>🏢 Venue deck</button>
-          <button onClick={() => setActiveTab('calendar')} className={`px-6 py-3 font-display text-sm uppercase tracking-[0.12em] transition-all border-2 ${activeTab === 'calendar' ? 'bg-accent text-black border-accent shadow-[0_0_28px_-6px_var(--role-color)]' : 'text-white border-white/15 hover:border-accent/80 hover:text-accent bg-black/20'}`}>📅 Schedule board</button>
-          <button onClick={() => setActiveTab('pricing')} className={`px-6 py-3 font-display text-sm uppercase tracking-[0.12em] transition-all border-2 ${activeTab === 'pricing' ? 'bg-accent text-black border-accent shadow-[0_0_28px_-6px_var(--role-color)]' : 'text-white border-white/15 hover:border-accent/80 hover:text-accent bg-black/20'}`}>💲 Ticket pricing</button>
+        <div className="flex flex-wrap gap-3 mb-12 p-2 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md w-fit shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+          <button onClick={() => setActiveTab('venues')} className={`relative px-7 py-3.5 rounded-full text-sm font-bold uppercase tracking-widest transition-all duration-300 overflow-hidden flex items-center gap-3 ${activeTab === 'venues' ? 'text-black bg-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.4)] scale-[1.02]' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}>
+            <span className="text-lg">🏟️</span>
+             Venue Deck
+          </button>
+          <button onClick={() => setActiveTab('calendar')} className={`relative px-7 py-3.5 rounded-full text-sm font-bold uppercase tracking-widest transition-all duration-300 overflow-hidden flex items-center gap-3 ${activeTab === 'calendar' ? 'text-black bg-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.4)] scale-[1.02]' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}>
+            <span className="text-lg">📅</span>
+             Schedule Board
+          </button>
+          <button onClick={() => setActiveTab('pricing')} className={`relative px-7 py-3.5 rounded-full text-sm font-bold uppercase tracking-widest transition-all duration-300 overflow-hidden flex items-center gap-3 ${activeTab === 'pricing' ? 'text-black bg-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.4)] scale-[1.02]' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}>
+            <span className="text-lg">💲</span>
+             Ticket Pricing
+          </button>
         </div>
 
 
@@ -429,67 +484,109 @@ const OwnerDashboard = () => {
               {myTurfs.map((t) => {
                 const turfUrls = collectTurfImageUrls(t, API);
                 return (
-                <div key={t.TurfID} className="brutal-card group overflow-hidden">
+                <div key={t.TurfID} className="glass group overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl hover:shadow-2xl hover:shadow-white/5 hover:-translate-y-1 transition-all duration-300" style={{ contentVisibility: 'auto', containIntrinsicSize: '420px 760px' }}>
                   {/* Image header: auto-slide when multiple photos */}
-                  <div className="h-48 bg-slate-800 relative isolate">
-                    <VenueImageCarousel urls={turfUrls} alt={t.Name} emptyVariant="owner" />
-                    <span className={`absolute top-4 right-4 z-10 text-xs font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-md ${t.Status === 'MAINTENANCE' ? 'bg-zinc-600/90 text-white' : 'bg-white/25 text-white'}`}>
-                      {t.Status}
-                    </span>
+                  <div className="h-56 relative isolate overflow-hidden rounded-t-3xl">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none" />
+                    <VenueImageCarousel urls={turfUrls} alt={t.Name} emptyVariant="owner" autoplay={false} />
+                    <div className="absolute top-4 right-4 z-20 flex gap-2">
+                       <span className={`text-xs font-bold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-md border ${t.Status === 'MAINTENANCE' ? 'bg-red-500/20 text-red-200 border-red-500/30' : 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'}`}>
+                         {t.Status === 'MAINTENANCE' ? 'MAINTENANCE' : 'ACTIVE'}
+                       </span>
+                    </div>
                     {turfUrls.length > 1 && (
-                      <span className="absolute top-4 left-4 z-10 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-black/55 text-white border border-white/10 backdrop-blur-sm">
-                        {turfUrls.length} photos
+                      <span className="absolute bottom-4 right-4 z-20 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg bg-black/60 text-white border border-white/20 backdrop-blur-md shadow-lg">
+                        <i className="fi fi-rr-picture mr-1"></i> {turfUrls.length} Photos
                       </span>
                     )}
                   </div>
 
-                  <div className="p-6">
-                    <div className="flex justify-between items-start gap-3 mb-4">
-                      <div className="flex gap-3 min-w-0">
+                  <div className="p-6 relative z-10">
+                    <div className="flex justify-between items-start gap-4 mb-5">
+                      <div className="flex gap-4 min-w-0 flex-1">
                         {turfUrls[0] ? (
-                          <div className="h-14 w-14 rounded-xl overflow-hidden border-2 border-accent/40 shrink-0 shadow-md ring-1 ring-white/10 bg-slate-900">
+                          <div className="h-16 w-16 rounded-2xl overflow-hidden border border-white/10 shrink-0 shadow-lg bg-slate-900/50 group-hover:scale-105 transition-transform duration-300">
                             <img src={turfUrls[0]} alt="" className="h-full w-full object-cover" />
                           </div>
-                        ) : null}
-                        <div className="min-w-0">
-                          <h3 className="text-xl font-bold text-white truncate">{t.Name}</h3>
-                          <p className="text-sm text-slate-400">{t.Location || 'No location set'} • {t.SportType}</p>
+                        ) : (
+                          <div className="h-16 w-16 rounded-2xl overflow-hidden border border-white/10 shrink-0 shadow-lg bg-slate-900/50 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                             <span className="text-2xl">🏟️</span>
+                          </div>
+                        )}
+                        <div className="min-w-0 flex flex-col justify-center">
+                          <h3 className="text-2xl font-extrabold text-white truncate drop-shadow-sm group-hover:text-emerald-400 transition-colors">{t.Name}</h3>
+                          <div className="flex items-center text-sm text-slate-300/80 mt-1 gap-2">
+                              <span className="flex items-center gap-1"><i className="fi fi-rr-marker text-emerald-400/80 text-xs"></i><span className="truncate max-w-[120px] sm:max-w-[180px]">{t.Location || 'No location set'}</span></span>
+                              <span className="text-white/20">•</span>
+                              <span className="flex items-center gap-1"><i className="fi fi-rr-basketball text-emerald-400/80 text-xs"></i> <span>{t.SportType}</span></span>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-xl font-bold text-zinc-200">Rs. {t.PricePerHour}<span className="text-sm text-slate-500">/hr</span></p>
+                      <div className="text-right shrink-0 flex flex-col items-end">
+                        <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md inline-block">
+                             <p className="text-xl font-black text-white flex items-baseline gap-1">
+                                 <span className="text-sm font-medium text-slate-400">Rs.</span>
+                                 {t.PricePerHour}
+                                 <span className="text-xs font-medium text-slate-400">/hr</span>
+                             </p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 mb-6">
-                      <button onClick={() => startEdit(t)} className="flex-1 py-2 rounded bg-white/10 text-zinc-200 text-xs font-bold border border-white/25 hover:bg-white/15 transition-all">Edit Info</button>
-                      <button onClick={() => deleteTurf(t.TurfID)} className="flex-1 py-2 rounded bg-white/10 text-zinc-400 text-xs font-bold border border-white/20 hover:bg-white/15 transition-all">Delete</button>
+                    <div className="flex gap-3 mb-6">
+                      <button onClick={() => startEdit(t)} className="flex-1 py-2.5 rounded-xl bg-white text-black text-sm font-bold shadow-lg shadow-white/10 hover:bg-zinc-200 hover:scale-[1.02] active:scale-95 transition-all flex justify-center items-center gap-2">
+                          <i className="fi fi-rr-edit"></i> Edit Details
+                      </button>
+                      <button onClick={() => deleteTurf(t.TurfID)} className="flex-1 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-bold hover:bg-red-500/20 hover:text-red-300 hover:scale-[1.02] active:scale-95 transition-all flex justify-center items-center gap-2">
+                          <i className="fi fi-rr-trash"></i> Delete
+                      </button>
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-white/10">
+                    <div className="pt-5 border-t border-white/10">
                       {/* Maintenance Lock */}
-                      <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                        <div className="flex justify-between items-center mb-2">
-                          <div>
-                            <p className="text-sm font-semibold text-white">Maintenance Lock</p>
-                            <p className="text-xs text-slate-400">Prevent bookings during specific dates</p>
+                      <div className="p-4 rounded-2xl bg-black/20 border border-white/5">
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="flex items-center gap-2">
+                            <i className="fi fi-rr-settings text-slate-400"></i>
+                            <div>
+                                <p className="text-sm font-bold text-slate-200">Maintenance Schedule</p>
+                                <p className="text-xs text-slate-500">Block dates for upkeep</p>
+                            </div>
                           </div>
                           {t.Status === 'MAINTENANCE' && (
-                            <button onClick={() => clearMaintenance(t.TurfID)} className="text-xs text-zinc-400 hover:text-zinc-200 font-bold uppercase tracking-tighter">Clear Lock</button>
+                            <button onClick={() => clearMaintenance(t.TurfID)} className="text-xs text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-400/10 px-2 py-1 rounded-lg transition-colors flex items-center gap-1">
+                                <i className="fi fi-rr-unlock"></i> Unlock
+                            </button>
                           )}
                         </div>
                         {t.Status === 'MAINTENANCE' ? (
-                          <div className="px-3 py-2 bg-white/10 border border-white/25 rounded-lg text-zinc-200 text-xs font-bold">
-                            Locked: {t.MaintenanceLockStart} to {t.MaintenanceLockEnd}
+                          <div className="flex items-center gap-3 px-3 py-2.5 bg-red-500/5 border border-red-500/20 rounded-xl text-red-200 text-sm font-medium">
+                            <i className="fi fi-rr-calendar-clock text-red-400/70"></i>
+                            <span>Offline: <strong className="text-red-100">{t.MaintenanceLockStart}</strong> to <strong className="text-red-100">{t.MaintenanceLockEnd}</strong></span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <input type="date" className="flex-1 px-2 py-1.5 bg-arena-950 border border-white/10 rounded text-slate-300 text-[10px]" 
-                              onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, start: e.target.value})} />
-                            <input type="date" className="flex-1 px-2 py-1.5 bg-arena-950 border border-white/10 rounded text-slate-300 text-[10px]" 
-                              onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, end: e.target.value})} />
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                              <div className="flex-1 flex gap-2 w-full">
+                                <div className="relative flex-1 group/input">
+                                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none group-focus-within/input:text-emerald-400 text-slate-500 transition-colors">
+                                        <i className="fi fi-rr-calendar text-[10px]"></i>
+                                    </div>
+                                    <input type="date" className="w-full pl-7 pr-2 py-2 bg-black/40 border border-white/10 rounded-xl text-slate-300 text-xs focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all" 
+                                      onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, start: e.target.value})} />
+                                </div>
+                                <div className="text-slate-500 flex items-center text-xs px-1">to</div>
+                                <div className="relative flex-1 group/input">
+                                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none group-focus-within/input:text-emerald-400 text-slate-500 transition-colors">
+                                        <i className="fi fi-rr-calendar text-[10px]"></i>
+                                    </div>
+                                    <input type="date" className="w-full pl-7 pr-2 py-2 bg-black/40 border border-white/10 rounded-xl text-slate-300 text-xs focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all" 
+                                      onChange={e => setMaintenanceForm({...maintenanceForm, turfId: t.TurfID, end: e.target.value})} />
+                                </div>
+                              </div>
                             <button onClick={() => submitMaintenance(t.TurfID)} disabled={!maintenanceForm.start || !maintenanceForm.end || maintenanceForm.turfId !== t.TurfID}
-                              className="px-3 py-1.5 bg-zinc-800 text-white rounded text-[10px] font-bold uppercase disabled:opacity-50 hover:bg-zinc-700">Lock</button>
+                              className="w-full sm:w-auto px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5 shrink-0">
+                                  <i className="fi fi-rr-lock"></i> Lock
+                              </button>
                           </div>
                         )}
                       </div>
@@ -499,10 +596,15 @@ const OwnerDashboard = () => {
               );
               })}
               {myTurfs.length === 0 && (
-                <div className="col-span-full py-20 brutal-card flex flex-col items-center justify-center">
-                  <span className="text-6xl mb-4 opacity-50">🏟️</span>
-                  <p className="text-xl font-bold text-slate-500 uppercase tracking-tighter">No venues listed yet</p>
-                  <button onClick={() => setShowVenueForm(true)} className="mt-4 brutal-btn px-6 py-2">+ List Your First Property</button>
+                <div className="col-span-full py-24 glass rounded-3xl flex flex-col items-center justify-center border border-white/10 border-dashed backdrop-blur-md bg-white/5">
+                  <div className="h-24 w-24 rounded-full bg-white/5 flex items-center justify-center mb-6 shadow-inner ring-1 ring-white/10">
+                      <span className="text-5xl opacity-40 mix-blend-overlay">🏟️</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">No venues listed yet</h3>
+                  <p className="text-sm text-slate-400 mb-8 max-w-sm text-center">Add your first property to start receiving bookings and managing your turf efficiently.</p>
+                  <button onClick={() => setShowVenueForm(true)} className="px-8 py-3.5 rounded-full bg-white text-black font-bold shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                    <i className="fi fi-rr-add"></i> List Your First Property
+                  </button>
                 </div>
               )}
             </div>
@@ -512,36 +614,89 @@ const OwnerDashboard = () => {
         {/* ═══ TAB: Visual Calendar ═══ */}
         {activeTab === 'calendar' && (
           <div className="animate-fade-in-up">
-            <div className="glass rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Booking Schedule</h2>
-              <div className="space-y-8">
+            <div className="glass rounded-3xl p-8 border border-white/10 shadow-2xl backdrop-blur-xl">
+              <div className="mb-8">
+                  <h2 className="text-3xl font-extrabold text-white mb-2 flex items-center gap-3">
+                      <i className="fi fi-rr-calendar text-emerald-400"></i> Booking Schedule
+                  </h2>
+                  <p className="text-slate-400 max-w-2xl text-sm">Review your daily schedule, upcoming reservations, and track game statuses across all your properties in real-time.</p>
+              </div>
+
+              <div className="space-y-10">
                 {/* Group bookings by Date */}
                 {Object.entries(
                   ownerBookings.reduce((acc, b) => {
                     (acc[b.BookingDate] = acc[b.BookingDate] || []).push(b);
                     return acc;
                   }, {})
-                ).sort(([d1], [d2]) => new Date(d1) - new Date(d2)).map(([date, bks]) => (
-                  <div key={date}>
-                    <h3 className="text-lg font-bold text-zinc-200 mb-3 border-b border-white/10 pb-2">{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ).sort(([d1], [d2]) => new Date(d1) - new Date(d2)).map(([date, bks], index) => (
+                  <div key={date} className="relative">
+                    {/* Visual Timeline line */}
+                    {index !== 0 && <div className="absolute -top-10 left-4 w-px h-10 bg-white/10" />}
+
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="h-8 w-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                            <i className="fi fi-rr-calendar-day text-sm"></i>
+                        </div>
+                        <h3 className="text-xl font-bold text-white drop-shadow-sm">
+                            {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pl-4 sm:pl-12">
                       {bks.map(b => {
                         const isCancelled = b.Status === 'CANCELLED';
-                        const borderColor = isCancelled ? 'bg-zinc-600' : b.Status === 'CONFIRMED' ? 'bg-white' : 'bg-zinc-500';
+                        const isConfirmed = b.Status === 'CONFIRMED';
+                        const statusColor = isCancelled ? 'red' : isConfirmed ? 'emerald' : 'amber';
+                        
                         return (
-                          <div key={b.BookingID} className={`p-4 bg-white/5 border border-white/10 rounded-xl relative overflow-hidden group ${isCancelled ? 'opacity-75' : ''}`}>
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${borderColor}`} />
-                            <div className="flex justify-between items-start mb-1">
-                              <p className="text-sm font-semibold text-white">{b.TurfName}</p>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isCancelled ? 'bg-white/10 text-zinc-500' : b.Status === 'CONFIRMED' ? 'bg-white/15 text-zinc-100' : 'bg-white/10 text-zinc-300'}`}>
+                          <div key={b.BookingID} className={`group relative p-5 bg-gradient-to-b from-white/5 to-white/[0.02] border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all duration-300 hover:shadow-xl ${isCancelled ? 'opacity-60 grayscale hover:opacity-80' : ''}`} style={{ contentVisibility: 'auto', containIntrinsicSize: '240px 220px' }}>
+                            {/* Decorative Line matching status */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors group-hover:w-2 ${isCancelled ? 'bg-red-500/50' : isConfirmed ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                            
+                            <div className="flex justify-between items-start mb-3">
+                              <p className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors truncate pr-2">{b.TurfName}</p>
+                              <span className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md shrink-0 ${isCancelled ? 'bg-red-500/10 text-red-500 border border-red-500/20' : isConfirmed ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                {isConfirmed && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
                                 {b.Status}
                               </span>
                             </div>
-                            <p className={`text-xl font-bold my-1 ${isCancelled ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{b.StartTime.substring(0,5)} <span className="text-sm text-slate-500 font-normal">to</span> {b.EndTime.substring(0,5)}</p>
-                            <div className="flex justify-between items-center text-xs text-slate-400">
-                              <span className="uppercase tracking-wide">{b.Visibility} Game</span>
-                              {b.PaymentStatus === 'PAID' && <span className="text-zinc-200 bg-white/10 px-2 py-0.5 rounded">PAID</span>}
-                              {b.PaymentStatus === 'REFUNDED' && <span className="text-zinc-400 bg-white/10 px-2 py-0.5 rounded">REFUNDED</span>}
+
+                            <div className="bg-black/30 rounded-xl p-3 mb-4 border border-white/5">
+                                <div className="flex items-center justify-center gap-3">
+                                    <p className={`text-2xl font-black tracking-tight ${isCancelled ? 'text-slate-500 line-through' : 'text-white'}`}>
+                                        {b.StartTime.substring(0,5)}
+                                    </p>
+                                    <i className="fi fi-rr-arrow-right text-slate-500 text-xs"></i>
+                                    <p className={`text-2xl font-black tracking-tight ${isCancelled ? 'text-slate-500 line-through' : 'text-white'}`}>
+                                        {b.EndTime.substring(0,5)}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center pt-3 border-t border-white/5">
+                              <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                                  <i className={`fi ${b.Visibility === 'Public' ? 'fi-rr-globe' : 'fi-rr-lock'}`}></i>
+                                  <span className="uppercase tracking-wider">{b.Visibility}</span>
+                              </div>
+                              
+                              <div className="flex gap-2">
+                                  {b.PaymentStatus === 'PAID' && (
+                                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md shadow-inner">
+                                          <i className="fi fi-rr-check-circle"></i> PAID
+                                      </span>
+                                  )}
+                                  {b.PaymentStatus === 'REFUNDED' && (
+                                      <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-white/10 border border-white/10 px-2 py-1 rounded-md">
+                                          <i className="fi fi-rr-rotate-right"></i> REFUNDED
+                                      </span>
+                                  )}
+                                  {b.PaymentStatus !== 'PAID' && b.PaymentStatus !== 'REFUNDED' && (
+                                      <span className="flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md">
+                                          <i className="fi fi-rr-time-clock"></i> PENDING
+                                      </span>
+                                  )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -550,7 +705,13 @@ const OwnerDashboard = () => {
                   </div>
                 ))}
                 {ownerBookings.length === 0 && (
-                  <p className="text-slate-500 text-center py-8">No bookings to display.</p>
+                  <div className="py-20 flex flex-col items-center justify-center rounded-3xl border border-white/5 border-dashed bg-white/[0.02]">
+                      <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center mb-6 ring-1 ring-white/10">
+                          <i className="fi fi-rr-calendar-lines text-3xl opacity-30"></i>
+                      </div>
+                      <p className="text-lg font-bold text-slate-400 mb-2">Your schedule is currently clear.</p>
+                      <p className="text-sm text-slate-500">When players book your turfs, they will seamlessly appear here.</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -559,34 +720,78 @@ const OwnerDashboard = () => {
         {/* ═══ TAB: Pricing Rules ═══ */}
         {activeTab === 'pricing' && (
           <div className="animate-fade-in-up">
-            <div className="glass rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Pricing Rules & Surge Management</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass rounded-3xl p-8 border border-white/10 shadow-2xl backdrop-blur-xl">
+              <div className="mb-8">
+                  <h2 className="text-3xl font-extrabold text-white mb-2 flex items-center gap-3">
+                      <i className="fi fi-rr-tags text-accent"></i> Pricing Strategies
+                  </h2>
+                  <p className="text-slate-400 max-w-2xl text-sm">Manage base prices, enable intelligent surge models, and run dynamic weekends to maximize your turf's revenue seamlessly.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {myTurfs.map(t => (
-                  <div key={t.TurfID} className="p-5 bg-white/5 border border-white/10 rounded-xl">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-white">{t.Name}</h3>
-                        <p className="text-sm text-slate-400">Base Price: <span className="text-zinc-200 font-bold">Rs. {t.PricePerHour}</span></p>
+                  <div key={t.TurfID} className="group relative p-6 bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-3xl hover:border-accent/30 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] transition-all duration-500 overflow-hidden" style={{ contentVisibility: 'auto', containIntrinsicSize: '320px 220px' }}>
+                    {/* Decorative Background Blob */}
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl group-hover:bg-accent/10 transition-colors pointer-events-none"></div>
+
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-accent/80 bg-accent/10 px-2.5 py-1 rounded-lg w-fit border border-accent/20">
+                            {t.SportType}
+                        </span>
+                        <h3 className="text-2xl font-bold text-white group-hover:text-accent transition-colors drop-shadow-sm truncate pr-4">{t.Name}</h3>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${t.WeekendPriceMultiplier > 1.0 ? 'bg-white/10 text-zinc-200' : 'bg-slate-700 text-slate-300'}`}>
-                        {t.WeekendPriceMultiplier > 1.0 ? 'SURGE ACTIVE' : 'STANDARD'}
-                      </span>
+                      <div className="text-right shrink-0">
+                         <div className="bg-black/40 border border-white/10 px-4 py-2.5 rounded-2xl backdrop-blur-md shadow-inner flex flex-col items-end">
+                            <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Base Rate</span>
+                            <p className="text-xl font-black text-white flex items-baseline gap-1">
+                                <span className="text-sm font-medium text-slate-400">Rs.</span>
+                                {t.PricePerHour}
+                                <span className="text-xs font-medium text-slate-400">/hr</span>
+                            </p>
+                         </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-arena-950 border border-white/5">
-                      <div>
-                        <p className="text-sm font-semibold text-white">Weekend Surge Pricing</p>
-                        <p className="text-xs text-slate-400">Automatically multiply price by 1.2x on weekends</p>
+
+                    <div className="relative z-10 p-5 rounded-2xl bg-black/30 border border-white/5 backdrop-blur-sm group-hover:bg-black/40 transition-colors">
+                      <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                              <div className={`p-3 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-500 shadow-inner ${t.WeekendPriceMultiplier > 1.0 ? 'bg-accent/20 text-accent ring-1 ring-accent/30' : 'bg-white/5 text-slate-400 ring-1 ring-white/10'}`}>
+                                  <i className="fi fi-rr-arrow-trend-up text-xl"></i>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-sm font-bold text-white">Weekend Surge</p>
+                                    {t.WeekendPriceMultiplier > 1.0 ? (
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-accent/20 text-accent border border-accent/30 flex items-center gap-1 animate-pulse">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-accent"></div> Active
+                                        </span>
+                                    ) : (
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">
+                                            Idle
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-xs text-slate-400">Automatically multiply rates by <strong className="text-slate-200">1.2x</strong> on Sat & Sun to boost profits.</p>
+                              </div>
+                          </div>
+                          
+                          <button onClick={() => toggleSurgePricing(t.TurfID, t.WeekendPriceMultiplier)}
+                            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-all duration-300 shadow-inner focus:outline-none ${t.WeekendPriceMultiplier > 1.0 ? 'bg-accent shadow-[0_0_15px_var(--role-color)]' : 'bg-slate-700'}`}>
+                            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${t.WeekendPriceMultiplier > 1.0 ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
                       </div>
-                      <button onClick={() => toggleSurgePricing(t.TurfID, t.WeekendPriceMultiplier)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${t.WeekendPriceMultiplier > 1.0 ? 'bg-zinc-200' : 'bg-slate-600'}`}>
-                        <span className={`inline-block h-4 w-4 transform rounded-full transition-transform ${t.WeekendPriceMultiplier > 1.0 ? 'translate-x-6 bg-black' : 'translate-x-1 bg-white'}`} />
-                      </button>
                     </div>
                   </div>
                 ))}
                 {myTurfs.length === 0 && (
-                  <p className="text-slate-500 text-center py-8 col-span-full">No venues found to manage pricing.</p>
+                  <div className="col-span-full py-16 flex flex-col items-center justify-center rounded-3xl border border-white/5 border-dashed bg-white/[0.02]">
+                      <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center mb-6 ring-1 ring-white/10">
+                          <i className="fi fi-rr-tags text-3xl opacity-30"></i>
+                      </div>
+                      <p className="text-lg font-bold text-slate-400 mb-2">No properties available for pricing.</p>
+                      <p className="text-sm text-slate-500">List a venue first to start managing its pricing strategies.</p>
+                  </div>
                 )}
               </div>
             </div>

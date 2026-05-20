@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 const BookingPoster = ({ booking, onCancel, onChat, onToggleVisibility, roleColor = 'emerald' }) => {
   // Parse date
@@ -19,11 +18,9 @@ const BookingPoster = ({ booking, onCancel, onChat, onToggleVisibility, roleColo
   const displayStatus = booking.Status === 'CANCELLED' ? 'CANCELLED' : (isPast ? 'COMPLETED' : booking.Status);
 
   return (
-    <motion.div
+    <div
       className={`relative group border-2 border-white/20 bg-arena-900 overflow-hidden mb-4 rounded-none transition-colors ${booking.Status === 'CANCELLED' ? 'opacity-50 grayscale' : 'hover:border-white/50'}`}
-      initial="rest"
-      whileHover="hover"
-      animate="rest"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '100% 240px' }}
     >
       <div className="flex flex-col sm:flex-row min-h-[160px] relative z-10 bg-arena-900 transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:-translate-y-[80px]">
         <div className="flex flex-col justify-center items-center p-6 border-b-2 sm:border-b-0 sm:border-r-2 border-white/20 w-full sm:w-48 shrink-0 bg-[url('/noise.png')]">
@@ -92,19 +89,17 @@ const BookingPoster = ({ booking, onCancel, onChat, onToggleVisibility, roleColo
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
 export const EmptyBookings = () => (
-  <div className="relative border-2 border-white/10 p-12 overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
-    <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-      <span className="text-[20rem] font-black font-space tracking-tighter">00</span>
+  <div className="py-20 flex flex-col items-center justify-center rounded-3xl border border-white/5 border-dashed bg-white/[0.02] backdrop-blur-md">
+    <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center mb-6 ring-1 ring-white/10 shadow-inner">
+      <i className="fi fi-rr-ticket text-3xl opacity-40 mix-blend-overlay"></i>
     </div>
-    <div className="relative z-10 text-center">
-      <h3 className="text-2xl font-black text-white font-space uppercase tracking-widest mb-4">NO BATTLE SCHEDULED.</h3>
-      <p className="text-slate-400 font-mono mb-8">JOIN A GAME AND PROVE YOUR WORTH.</p>
-    </div>
+    <h3 className="text-xl font-bold text-white mb-2">No bookings found</h3>
+    <p className="text-sm text-slate-500 max-w-sm text-center">You haven't scheduled any games in this category yet. Start browsing turfs to book your next match.</p>
   </div>
 );
 

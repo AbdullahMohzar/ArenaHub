@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context useHttpOnly="true">
+    <!-- Skip JAR scanning for annotations to avoid BCEL parsing errors with modern Java modules -->
+    <JarScanner scanAllDirectories="false" scanClassPath="false" scanAllFiles="false" />
+</Context>

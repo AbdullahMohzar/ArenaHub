@@ -1,31 +1,8 @@
-import { useEffect, useRef, useState, Suspense, lazy } from 'react';
+import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const ThreeBackground = lazy(() => import('./ThreeBackground'));
-
-/** Mount WebGL only when the section is near the viewport — avoids a second full-screen Three.js loop on initial home load. */
-function useNearViewport(ref, rootMargin = '200px') {
-  const [near, setNear] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === 'undefined') {
-      setNear(true);
-      return;
-    }
-    const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) setNear(true);
-      },
-      { rootMargin, threshold: 0 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [rootMargin]);
-  return near;
-}
 
 const modules = [
   {
@@ -118,7 +95,6 @@ const modules = [
 export default function PlatformModules() {
   const sectionRef = useRef(null);
   const cardsRef = useRef(null);
-  const showThreeBg = useNearViewport(sectionRef, '280px');
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -126,7 +102,7 @@ export default function PlatformModules() {
     if (!section || !cards) return;
 
     const ctx = gsap.context(() => {
-      // Pin the left text while cards scroll
+      // Pin the left text while cards scroll on the right
       ScrollTrigger.create({
         trigger: section,
         start: 'top top',
@@ -158,18 +134,6 @@ export default function PlatformModules() {
 
   return (
     <section ref={sectionRef} className="relative min-h-screen bg-[#0a0a0a] text-white overflow-hidden">
-      {/* Three.js Background — FIXED so it stays in place */}
-      <div className="fixed inset-0 z-0 bg-[#0a0a0a]">
-        {showThreeBg ? (
-          <Suspense fallback={null}>
-            <ThreeBackground />
-          </Suspense>
-        ) : null}
-      </div>
-
-      {/* Dark overlay for readability */}
-      <div className="fixed inset-0 bg-[#0a0a0a]/50 z-[1] pointer-events-none" />
-
       {/* Content */}
       <div className="relative z-10 flex max-w-[1400px] mx-auto">
         {/* Left sticky text */}

@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
+import java.time.Duration;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -21,9 +22,56 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles all HTTP requests for booking-related operations
+ *    - Routes GET requests to conflict detection or public games
+ *    - Routes POST requests to booking creation
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in booking operations
+ *    - Only class that knows how bookings work
+ * 
+ * ✅ POLYMORPHISM (GRASP):
+ *    - Different doGet() and doPost() implementations
+ *    - Same method names, different behaviors based on parameters
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Hides complexity of:
+ *      • Conflict detection between multiple bookings
+ *      • Public game discovery
+ *      • Booking creation with payment processing
+ *      • Weekly subscription logic
+ *    - Clients see simple API, complex logic hidden
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - GET strategy: conflict detection (checkConflicts parameter)
+ *    - GET strategy: public games fetching (publicGames parameter)
+ *    - POST strategy: create booking with visibility/recurring options
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - Extends HttpServlet template
+ *    - Override doGet() for GET requests
+ *    - Override doPost() for POST requests
+ * 
+ * ✅ ADAPTER PATTERN (GOF):
+ *    - Adapts JSON request to internal booking objects
+ *    - Adapts booking data to JSON response
+ */
+
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request/response handling from parent servlet framework
+ */
 @WebServlet("/api/bookings")
 public class BookingServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private method - encapsulates CORS header configuration
+     * Restricts direct access to header-setting logic, maintaining information hiding
+     */
     private void setAccessControlHeaders(HttpServletResponse resp) {
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
@@ -36,13 +84,17 @@ public class BookingServlet extends HttpServlet {
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /**
+     * UC-04: Book a Turf Slot - Fetches conflict times
+     * UC-06: Join a Public Game - Fetches available public games for players
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
 
-        // ── BRANCH 1: Conflict Discovery API ──
+        // ── BRANCH 1: Conflict Discovery API (UC-04) ──
         String checkConflicts = req.getParameter("checkConflicts");
         String dateStr = req.getParameter("date");
         String turfIdStr = req.getParameter("turfId");
@@ -81,7 +133,7 @@ public class BookingServlet extends HttpServlet {
             }
         }
 
-        // ── BRANCH 2: Public Games — Fetch all public confirmed bookings ──
+        // ── BRANCH 2: Public Games — Fetch all public confirmed bookings (UC-06) ──
         String publicGames = req.getParameter("publicGames");
         if ("true".equalsIgnoreCase(publicGames)) {
             String userIdParam = req.getParameter("userId");
@@ -210,6 +262,14 @@ public class BookingServlet extends HttpServlet {
         }
     }
 
+    /**
+     * UC-04: Book a Turf Slot & UC-05: Toggle Game Visibility & UC-08: Subscribe to Weekly Slot
+     * Creates booking, validates dates/times, calculates pricing, processes payments
+     * 
+     * POLYMORPHISM: Override - doPost() for booking creation and game visibility toggle
+     * INTERFACE: Connection, PreparedStatement, ResultSet provide JDBC abstraction layer
+     * ABSTRACTION: Complex booking logic hidden behind transaction management
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -238,10 +298,9 @@ public class BookingServlet extends HttpServlet {
             String bookingDate = jsonRequest.get("bookingDate").getAsString();
             String startTime = jsonRequest.get("startTime").getAsString();
             String endTime = jsonRequest.get("endTime").getAsString();
-
-            // Optional fields for Phase 2 (Captain features) & Defaulting Payment Status
             String visibility = jsonRequest.has("visibility") ? jsonRequest.get("visibility").getAsString() : "PRIVATE";
             int maxPlayers = jsonRequest.has("maxPlayers") ? jsonRequest.get("maxPlayers").getAsInt() : 10;
+            // UC-08: Subscribe to Weekly Slot - isRecurring enables weekly subscription (4 weeks)
             boolean isRecurring = jsonRequest.has("isRecurring") && jsonRequest.get("isRecurring").getAsBoolean();
             JsonArray equipmentArr = jsonRequest.has("equipment") ? jsonRequest.getAsJsonArray("equipment") : null;
             String paymentStatus = "PAID"; // Assuming default PAID for now or passing it via jsonRequest.has("paymentStatus")
@@ -282,84 +341,164 @@ public class BookingServlet extends HttpServlet {
             }
 
             try (Connection conn = DatabaseConnection.getConnection()) {
+                ensureWalletTransactionTypes(conn);
+
+                int ownerId;
+                double turfPricePerHour;
+
+                String turfSql = "SELECT OwnerID, PricePerHour FROM Turfs WHERE TurfID = ?";
+                try (PreparedStatement turfStmt = conn.prepareStatement(turfSql)) {
+                    turfStmt.setInt(1, turfId);
+                    try (ResultSet turfRs = turfStmt.executeQuery()) {
+                        if (!turfRs.next()) {
+                            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                            resp.getWriter().write("{\"error\":\"Turf not found\"}");
+                            return;
+                        }
+                        ownerId = turfRs.getInt("OwnerID");
+                        turfPricePerHour = turfRs.getDouble("PricePerHour");
+                    }
+                }
+
+                if (ownerId <= 0) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    resp.getWriter().write("{\"error\":\"Turf owner is not configured\"}");
+                    return;
+                }
+
+                double durationHours = Duration.between(sTime, eTime).toMinutes() / 60.0;
+                if (durationHours <= 0) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    resp.getWriter().write("{\"error\":\"Invalid booking duration\"}");
+                    return;
+                }
+
+                double equipmentTotal = 0.0;
+                if (equipmentArr != null) {
+                    String equipmentSql = "SELECT PricePerHour FROM Equipment WHERE EquipmentID = ? AND Status = 'AVAILABLE'";
+                    for (JsonElement elem : equipmentArr) {
+                        JsonObject eqItem = elem.getAsJsonObject();
+                        int equipmentId = eqItem.get("equipmentId").getAsInt();
+                        int quantity = eqItem.has("quantity") ? eqItem.get("quantity").getAsInt() : 1;
+
+                        try (PreparedStatement equipmentStmt = conn.prepareStatement(equipmentSql)) {
+                            equipmentStmt.setInt(1, equipmentId);
+                            try (ResultSet eqRs = equipmentStmt.executeQuery()) {
+                                if (!eqRs.next()) {
+                                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                                    resp.getWriter().write("{\"error\":\"One of the selected equipment items is not available\"}");
+                                    return;
+                                }
+                                equipmentTotal += eqRs.getDouble("PricePerHour") * quantity;
+                            }
+                        }
+                    }
+                }
+
                 int totalWeeks = isRecurring ? 4 : 1;
                 String recurrenceGroupId = isRecurring ? UUID.randomUUID().toString() : null;
                 int successCount = 0;
                 int conflictCount = 0;
                 int lastBookingId = -1;
+                boolean previousAutoCommit = conn.getAutoCommit();
 
-                for (int week = 0; week < totalWeeks; week++) {
-                    java.time.LocalDate currentDate = bDate.plusWeeks(week);
-                    String currentDateStr = currentDate.toString();
+                conn.setAutoCommit(false);
 
-                    // Check for conflicts
-                    String checkSql = "SELECT COUNT(*) FROM Bookings WHERE TurfID = ? AND BookingDate = ? AND Status = 'CONFIRMED' AND (StartTime < ? AND EndTime > ?)";
-                    try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-                        checkStmt.setInt(1, turfId);
-                        checkStmt.setString(2, currentDateStr);
-                        checkStmt.setString(3, endTime);
-                        checkStmt.setString(4, startTime);
+                try {
+                    int payerWalletId = ensureWalletExists(conn, userId);
+                    int ownerWalletId = ensureWalletExists(conn, ownerId);
 
-                        try (ResultSet rs = checkStmt.executeQuery()) {
-                            if (rs.next() && rs.getInt(1) > 0) {
-                                conflictCount++;
-                                continue; // Skip this week
+                    for (int week = 0; week < totalWeeks; week++) {
+                        java.time.LocalDate currentDate = bDate.plusWeeks(week);
+                        String currentDateStr = currentDate.toString();
+
+                        // Check for conflicts
+                        String checkSql = "SELECT COUNT(*) FROM Bookings WHERE TurfID = ? AND BookingDate = ? AND Status = 'CONFIRMED' AND (StartTime < ? AND EndTime > ?)";
+                        try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                            checkStmt.setInt(1, turfId);
+                            checkStmt.setString(2, currentDateStr);
+                            checkStmt.setString(3, endTime);
+                            checkStmt.setString(4, startTime);
+
+                            try (ResultSet rs = checkStmt.executeQuery()) {
+                                if (rs.next() && rs.getInt(1) > 0) {
+                                    conflictCount++;
+                                    continue; // Skip this week
+                                }
                             }
                         }
-                    }
 
-                    // Insert booking
-                    String sql = "INSERT INTO Bookings (UserID, TurfID, BookingDate, StartTime, EndTime, Status, PaymentStatus, Visibility, MaxPlayers, CurrentPlayers, IsRecurring, RecurrenceGroupID) " +
-                                 "VALUES (?, ?, ?, ?, ?, 'CONFIRMED', ?, ?, ?, 1, ?, ?)";
-                    try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                        stmt.setInt(1, userId);
-                        stmt.setInt(2, turfId);
-                        stmt.setString(3, currentDateStr);
-                        stmt.setString(4, startTime);
-                        stmt.setString(5, endTime);
-                        stmt.setString(6, paymentStatus);
-                        stmt.setString(7, visibility);
-                        stmt.setInt(8, maxPlayers);
-                        stmt.setBoolean(9, isRecurring);
-                        stmt.setString(10, recurrenceGroupId);
+                        double bookingAmount = (durationHours * turfPricePerHour) + equipmentTotal;
+                        int payerWalletIdForBooking = payerWalletId;
+                        int ownerWalletIdForBooking = ownerWalletId;
 
-                        int rows = stmt.executeUpdate();
-                        if (rows > 0) {
-                            successCount++;
-                            try (ResultSet keys = stmt.getGeneratedKeys()) {
-                                if (keys.next()) lastBookingId = keys.getInt(1);
+                        if (!hasEnoughBalance(conn, payerWalletIdForBooking, bookingAmount)) {
+                            throw new SQLException("Insufficient wallet balance for booking");
+                        }
+
+                        // Insert booking
+                        String sql = "INSERT INTO Bookings (UserID, TurfID, BookingDate, StartTime, EndTime, Status, PaymentStatus, Visibility, MaxPlayers, CurrentPlayers, IsRecurring, RecurrenceGroupID) " +
+                                     "VALUES (?, ?, ?, ?, ?, 'CONFIRMED', ?, ?, ?, 1, ?, ?)";
+                        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                            stmt.setInt(1, userId);
+                            stmt.setInt(2, turfId);
+                            stmt.setString(3, currentDateStr);
+                            stmt.setString(4, startTime);
+                            stmt.setString(5, endTime);
+                            stmt.setString(6, paymentStatus);
+                            stmt.setString(7, visibility);
+                            stmt.setInt(8, maxPlayers);
+                            stmt.setBoolean(9, isRecurring);
+                            stmt.setString(10, recurrenceGroupId);
+
+                            int rows = stmt.executeUpdate();
+                            if (rows > 0) {
+                                successCount++;
+                                try (ResultSet keys = stmt.getGeneratedKeys()) {
+                                    if (keys.next()) lastBookingId = keys.getInt(1);
+                                }
+
+                                // Automatically add captain (booking creator) to GameParticipants
+                                if (lastBookingId > 0) {
+                                    String captainSql = "INSERT INTO GameParticipants (BookingID, UserID, Status) VALUES (?, ?, 'JOINED')";
+                                    try (PreparedStatement captainStmt = conn.prepareStatement(captainSql)) {
+                                        captainStmt.setInt(1, lastBookingId);
+                                        captainStmt.setInt(2, userId);
+                                        captainStmt.executeUpdate();
+                                    }
+                                }
                             }
-                            
-                            // Automatically add captain (booking creator) to GameParticipants
-                            if (lastBookingId > 0) {
-                                String captainSql = "INSERT INTO GameParticipants (BookingID, UserID, Status) VALUES (?, ?, 'JOINED')";
-                                try (PreparedStatement captainStmt = conn.prepareStatement(captainSql)) {
-                                    captainStmt.setInt(1, lastBookingId);
-                                    captainStmt.setInt(2, userId);
-                                    captainStmt.executeUpdate();
+                        }
+
+                        // Wallet transfer and equipment rentals are committed per successful booking
+                        deductFromWallet(conn, payerWalletIdForBooking, bookingAmount, "BOOKING_PAYMENT", "Booking #" + lastBookingId + " at turf #" + turfId);
+                        addToWallet(conn, ownerWalletIdForBooking, bookingAmount, "BOOKING_EARNING", "Booking #" + lastBookingId + " turf payout");
+
+                        if (lastBookingId > 0 && equipmentArr != null && equipmentArr.size() > 0) {
+                            for (JsonElement elem : equipmentArr) {
+                                JsonObject eqItem = elem.getAsJsonObject();
+                                int equipmentId = eqItem.get("equipmentId").getAsInt();
+                                int quantity = eqItem.has("quantity") ? eqItem.get("quantity").getAsInt() : 1;
+                                double totalPrice = getEquipmentPrice(conn, equipmentId) * quantity;
+
+                                String eqSql = "INSERT INTO EquipmentRentals (BookingID, EquipmentID, Quantity, TotalPrice) VALUES (?, ?, ?, ?)";
+                                try (PreparedStatement eqStmt = conn.prepareStatement(eqSql)) {
+                                    eqStmt.setInt(1, lastBookingId);
+                                    eqStmt.setInt(2, equipmentId);
+                                    eqStmt.setInt(3, quantity);
+                                    eqStmt.setDouble(4, totalPrice);
+                                    eqStmt.executeUpdate();
                                 }
                             }
                         }
                     }
 
-                    // Insert equipment rentals (only for the first booking, or each recurring)
-                    if (lastBookingId > 0 && equipmentArr != null && equipmentArr.size() > 0) {
-                        for (JsonElement elem : equipmentArr) {
-                            JsonObject eqItem = elem.getAsJsonObject();
-                            int equipmentId = eqItem.get("equipmentId").getAsInt();
-                            int quantity = eqItem.has("quantity") ? eqItem.get("quantity").getAsInt() : 1;
-                            double totalPrice = eqItem.has("totalPrice") ? eqItem.get("totalPrice").getAsDouble() : 0;
-
-                            String eqSql = "INSERT INTO EquipmentRentals (BookingID, EquipmentID, Quantity, TotalPrice) VALUES (?, ?, ?, ?)";
-                            try (PreparedStatement eqStmt = conn.prepareStatement(eqSql)) {
-                                eqStmt.setInt(1, lastBookingId);
-                                eqStmt.setInt(2, equipmentId);
-                                eqStmt.setInt(3, quantity);
-                                eqStmt.setDouble(4, totalPrice);
-                                eqStmt.executeUpdate();
-                            }
-                        }
-                    }
+                    conn.commit();
+                } catch (SQLException ex) {
+                    conn.rollback();
+                    throw ex;
+                } finally {
+                    conn.setAutoCommit(previousAutoCommit);
                 }
 
                 // Response
@@ -388,6 +527,97 @@ public class BookingServlet extends HttpServlet {
             System.err.println("Server error: " + e.getMessage());
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             resp.getWriter().write("{\"error\":\"Server Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private int ensureWalletExists(Connection conn, int userId) throws SQLException {
+        String selectSql = "SELECT WalletID FROM Wallets WHERE UserID = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(selectSql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("WalletID");
+                }
+            }
+        }
+
+        String insertSql = "INSERT INTO Wallets (UserID, Balance) VALUES (?, 0.00)";
+        try (PreparedStatement stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setInt(1, userId);
+            stmt.executeUpdate();
+            try (ResultSet keys = stmt.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return keys.getInt(1);
+                }
+            }
+        }
+
+        throw new SQLException("Could not create wallet for user " + userId);
+    }
+
+    private boolean hasEnoughBalance(Connection conn, int walletId, double amount) throws SQLException {
+        String sql = "SELECT Balance FROM Wallets WHERE WalletID = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, walletId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("Balance") >= amount;
+                }
+            }
+        }
+        return false;
+    }
+
+    private double getEquipmentPrice(Connection conn, int equipmentId) throws SQLException {
+        String sql = "SELECT PricePerHour FROM Equipment WHERE EquipmentID = ? AND Status = 'AVAILABLE'";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, equipmentId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("PricePerHour");
+                }
+            }
+        }
+        throw new SQLException("Equipment not available: " + equipmentId);
+    }
+
+    private void ensureWalletTransactionTypes(Connection conn) throws SQLException {
+        String alterSql = "ALTER TABLE WalletTransactions MODIFY COLUMN TransactionType ENUM('TOP_UP','BOOKING_PAYMENT','REFUND','EQUIPMENT_RENTAL','BOOKING_EARNING','REFUND_REVERSAL') NOT NULL";
+        try (PreparedStatement stmt = conn.prepareStatement(alterSql)) {
+            stmt.executeUpdate();
+        }
+    }
+
+    private void deductFromWallet(Connection conn, int walletId, double amount, String transactionType, String description) throws SQLException {
+        String updateSql = "UPDATE Wallets SET Balance = Balance - ? WHERE WalletID = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
+            stmt.setDouble(1, amount);
+            stmt.setInt(2, walletId);
+            stmt.executeUpdate();
+        }
+
+        insertWalletTransaction(conn, walletId, amount, transactionType, description);
+    }
+
+    private void addToWallet(Connection conn, int walletId, double amount, String transactionType, String description) throws SQLException {
+        String updateSql = "UPDATE Wallets SET Balance = Balance + ? WHERE WalletID = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
+            stmt.setDouble(1, amount);
+            stmt.setInt(2, walletId);
+            stmt.executeUpdate();
+        }
+
+        insertWalletTransaction(conn, walletId, amount, transactionType, description);
+    }
+
+    private void insertWalletTransaction(Connection conn, int walletId, double amount, String transactionType, String description) throws SQLException {
+        String txnSql = "INSERT INTO WalletTransactions (WalletID, Amount, TransactionType, Description) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(txnSql)) {
+            stmt.setInt(1, walletId);
+            stmt.setDouble(2, amount);
+            stmt.setString(3, transactionType);
+            stmt.setString(4, description);
+            stmt.executeUpdate();
         }
     }
 

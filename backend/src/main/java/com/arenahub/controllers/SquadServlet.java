@@ -17,9 +17,17 @@ import com.arenahub.utils.DatabaseConnection;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request handling and servlet lifecycle management
+ */
 @WebServlet("/api/squad/leave")
 public class SquadServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private method - hides CORS header configuration logic
+     * Restricts direct access to internal header-setting implementation details
+     */
     private void setAccessControlHeaders(HttpServletResponse resp) {
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setHeader("Access-Control-Allow-Methods", "DELETE, OPTIONS");

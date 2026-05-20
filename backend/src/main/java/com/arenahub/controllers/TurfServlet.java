@@ -25,10 +25,51 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles HTTP requests for turf-related operations
+ *    - Coordinates between HTTP layer and database layer
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in turf operations (search, create, update, maintenance)
+ *    - Only class that knows turf business logic
+ * 
+ * ✅ HIGH COHESION (GRASP):
+ *    - All turf-related methods together (doGet, doPost, doPut, doDelete)
+ *    - Not mixed with booking, payment, or other domains
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Simplifies complex turf operations
+ *    - Hides: SQL joins, image handling, pricing logic, maintenance locks
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - doGet, doPost, doPut override HttpServlet template methods
+ *    - Each method implements a specific algorithm
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - GET strategy: search turfs by filters
+ *    - POST strategy: create new turf
+ *    - PUT strategy: update pricing or maintenance
+ * 
+ * ✅ DECORATOR PATTERN (GOF):
+ *    - @WebServlet("/api/turfs") maps URL without modifying code
+ *    - @MultipartConfig enables file upload without modifying code
+ */
+
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request handling and servlet lifecycle management
+ */
 @WebServlet("/api/turfs")
 @MultipartConfig(fileSizeThreshold=1024*1024*2, maxFileSize=1024*1024*10, maxRequestSize=1024*1024*50)
 public class TurfServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private helper method - encapsulates file name extraction logic
+     * Reduces code duplication and hides implementation details from other classes
+     */
     private String getFileName(Part part) {
         for (String cd : part.getHeader("content-disposition").split(";")) {
             if (cd.trim().startsWith("filename")) {
@@ -38,18 +79,29 @@ public class TurfServlet extends HttpServlet {
         return "unknown";
     }
 
+    /**
+     * ENCAPSULATION: Private method - hides CORS header configuration from external access
+     * Controls access to internal header-setting implementation
+     */
     private void setAccessControlHeaders(HttpServletResponse resp) {
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE");
         resp.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     }
 
+    /**
+     * POLYMORPHISM: Override - HTTP OPTIONS handler
+     */
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /**
+     * UC-11: Browse and Search Venues
+     * Allows players and captains to search turfs by name, sport type, and max price
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -301,6 +353,14 @@ public class TurfServlet extends HttpServlet {
         }
     }
 
+    /**
+     * UC-03, UC-10: Set Dynamic Pricing Rules & Trigger Maintenance Lock
+     * Allows turf owners to set weekend price multipliers and trigger maintenance locks
+     * 
+     * POLYMORPHISM: Override - doPut() for turf updates (polymorphic to other servlets)
+     * INTERFACE: Connection & PreparedStatement provide database abstraction
+     * ABSTRACTION: Update logic and SQL execution hidden behind interface methods
+     */
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -320,6 +380,7 @@ public class TurfServlet extends HttpServlet {
 
             try (Connection conn = DatabaseConnection.getConnection()) {
                 switch (action) {
+                    // UC-03: Dynamic Pricing - Set weekend price multiplier
                     case "PRICING" -> {
                         double multiplier = json.get("weekendPriceMultiplier").getAsDouble();
                         String sql = "UPDATE Turfs SET WeekendPriceMultiplier = ? WHERE TurfID = ?";
@@ -337,6 +398,7 @@ public class TurfServlet extends HttpServlet {
                         String description = json.get("description").getAsString();
                         handleFullUpdate(conn, turfId, name, sportType, price, location, description, null);
                     }
+                    // UC-10: Maintenance Lock - Trigger maintenance lock on turf
                     case "MAINTENANCE" -> {
                         String start = (json.has("start") && !json.get("start").isJsonNull()) ? json.get("start").getAsString() : null;
                         String end = (json.has("end") && !json.get("end").isJsonNull()) ? json.get("end").getAsString() : null;

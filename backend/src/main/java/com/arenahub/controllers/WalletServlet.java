@@ -18,9 +18,47 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles HTTP requests for wallet operations
+ *    - Coordinates between HTTP requests and wallet database
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in wallet management
+ *    - Knows wallet queries, top-ups, transactions
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Simplifies wallet operations
+ *    - Hides: wallet creation, balance queries, transaction logging
+ *    - Clients see simple JSON API, complexity hidden
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - GET strategy: retrieve wallet balance and transaction history
+ *    - POST strategy: top-up wallet with new funds
+ *    - Each request type handled differently
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - doGet() implements wallet retrieval algorithm
+ *    - doPost() implements top-up algorithm
+ * 
+ * ✅ ADAPTER PATTERN (GOF):
+ *    - Adapts JSON request to wallet operations
+ *    - Adapts wallet data to JSON response format
+ */
+
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request handling capabilities and lifecycle management
+ */
 @WebServlet("/api/wallet")
 public class WalletServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private method - hides CORS header configuration logic
+     * Restricts access to internal header setup, maintaining information hiding principle
+     */
     private void setAccessControlHeaders(HttpServletResponse resp) {
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -33,6 +71,10 @@ public class WalletServlet extends HttpServlet {
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /**
+     * UC-07: Top Up Digital Wallet
+     * Allows individual players and team captains to view wallet balance and transaction history
+     */
     // GET /api/wallet?userId=X — Fetch wallet balance
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -114,6 +156,10 @@ public class WalletServlet extends HttpServlet {
         }
     }
 
+    /**
+     * UC-07: Top Up Digital Wallet
+     * POST endpoint to add funds to user's wallet
+     */
     // POST /api/wallet — Top up wallet { userId, amount }
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

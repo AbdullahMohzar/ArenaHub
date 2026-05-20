@@ -178,7 +178,7 @@ export function AuthPage({ defaultMode = 'signin' }) {
 
   return (
     <div className="auth-page">
-      <div className={`auth-container ${isSignUpMode ? 'sign-up-mode' : ''}`}>
+      <div className={`auth-container w-[900px] h-[600px] max-w-[95vw] shadow-[0_0_50px_rgba(52,211,153,0.15)] rounded-[2rem] relative overflow-hidden backdrop-blur-xl bg-black/40 border border-white/10 ${isSignUpMode ? 'sign-up-mode' : ''}`}>
         {/* ── Forms ── */}
         <div className="auth-forms-container">
           <div className="auth-signin-signup">
@@ -187,14 +187,16 @@ export function AuthPage({ defaultMode = 'signin' }) {
               <h2 className="auth-title">Sign in</h2>
 
               {loginError && (
-                <div className="auth-error">
+                <div className="auth-error bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-3 rounded-xl flex items-center gap-2 mb-6 w-full max-w-[380px] text-sm">
                   <AlertIcon />
                   {loginError}
                 </div>
               )}
 
-              <div className="auth-input-field">
-                <MailIcon />
+              <div className="auth-input-field relative w-full h-[55px] max-w-[380px] rounded-xl mb-4 bg-white/5 border border-white/10 hover:border-emerald-500/30 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all flex items-center px-4 shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+                <div className="text-slate-400 mr-2 flex items-center justify-center">
+                   <MailIcon />
+                </div>
                 <input
                   type="email"
                   name="email"
@@ -202,11 +204,14 @@ export function AuthPage({ defaultMode = 'signin' }) {
                   required
                   value={loginData.email}
                   onChange={handleLoginChange}
+                  className="w-full bg-transparent text-white placeholder-slate-500 outline-none text-base"
                 />
               </div>
 
-              <div className="auth-input-field">
-                <LockIcon />
+              <div className="auth-input-field relative w-full h-[55px] max-w-[380px] rounded-xl mb-6 bg-white/5 border border-white/10 hover:border-emerald-500/30 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all flex items-center px-4 shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+                <div className="text-slate-400 mr-2 flex items-center justify-center">
+                  <LockIcon />
+                </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -214,27 +219,28 @@ export function AuthPage({ defaultMode = 'signin' }) {
                   required
                   value={loginData.password}
                   onChange={handleLoginChange}
+                  className="w-full bg-transparent text-white placeholder-slate-500 outline-none text-base"
                 />
                 <button
                   type="button"
-                  className="auth-toggle-password"
+                  className="auth-toggle-password ml-2 text-slate-400 hover:text-emerald-400 transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
 
-              <div className="auth-options">
-                <label>
-                  <input type="checkbox" />
-                  <span>Remember me</span>
+              <div className="auth-options w-full max-w-[380px] flex justify-between items-center mb-6 text-sm">
+                <label className="flex items-center text-slate-400 gap-2 cursor-pointer group">
+                  <input type="checkbox" className="accent-emerald-400 border-white/20 w-4 h-4 rounded" />
+                  <span className="group-hover:text-white transition-colors">Remember me</span>
                 </label>
-                <Link to="/reset-password">Forgot password?</Link>
+                <Link to="/reset-password" className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">Forgot password?</Link>
               </div>
 
               <button
                 type="submit"
-                className="auth-btn auth-solid"
+                className="auth-btn auth-solid w-full max-w-[380px] h-[55px] rounded-xl bg-emerald-400 text-black font-black uppercase tracking-wider hover:bg-emerald-300 hover:shadow-[0_0_20px_rgba(52,211,153,0.4)] transition-all flex items-center justify-center"
                 disabled={loginLoading}
                 id="login-submit-button"
               >
@@ -247,19 +253,20 @@ export function AuthPage({ defaultMode = 'signin' }) {
                 )}
               </button>
 
-              <p className="auth-social-text">Or Sign in with social platforms</p>
-              <div className="auth-social-media">
-                <a href="#" className="auth-social-icon" aria-label="Facebook">f</a>
-                <a href="#" className="auth-social-icon" aria-label="Twitter">X</a>
-                <a href="#" className="auth-social-icon" aria-label="Google">G</a>
-                <a href="#" className="auth-social-icon" aria-label="LinkedIn">in</a>
+              <p className="auth-social-text text-sm text-slate-500 mt-6 mb-4">Or Sign in with</p>
+              <div className="auth-social-media flex gap-4">
+                <a href="#" className="auth-social-icon w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-emerald-400 hover:border-emerald-400/50 hover:bg-emerald-500/10 hover:-translate-y-1 hover:scale-105 transition-all" aria-label="Facebook">f</a>
+                <a href="#" className="auth-social-icon w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-emerald-400 hover:border-emerald-400/50 hover:bg-emerald-500/10 hover:-translate-y-1 hover:scale-105 transition-all" aria-label="Twitter">X</a>
+                <a href="#" className="auth-social-icon w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-emerald-400 hover:border-emerald-400/50 hover:bg-emerald-500/10 hover:-translate-y-1 hover:scale-105 transition-all" aria-label="Google">G</a>
+                <a href="#" className="auth-social-icon w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-emerald-400 hover:border-emerald-400/50 hover:bg-emerald-500/10 hover:-translate-y-1 hover:scale-105 transition-all" aria-label="LinkedIn">in</a>
               </div>
 
-              <p className="auth-switch-text">
+              <p className="auth-switch-text mt-8 text-slate-400 font-medium">
                 New here?{' '}
                 <button
                   type="button"
                   onClick={() => { setIsSignUpMode(true); setSignUpStep(1); }}
+                  className="text-emerald-400 font-bold hover:text-emerald-300 hover:underline transition-colors focus:outline-none"
                 >
                   Sign up
                 </button>
@@ -271,58 +278,68 @@ export function AuthPage({ defaultMode = 'signin' }) {
               <h2 className="auth-title">Sign up</h2>
 
               {signupError && (
-                <div className="auth-error">
+                <div className="auth-error bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-3 rounded-xl flex items-center gap-2 mb-6 w-full max-w-[380px] text-sm">
                   <AlertIcon />
                   {signupError}
                 </div>
               )}
 
               {signUpStep === 1 ? (
-                <div className="auth-role-grid">
+                <div className="auth-role-grid flex flex-col gap-3 w-full max-w-[380px]">
                   {ROLE_OPTIONS.map((role) => (
                     <button
                       key={role.value}
                       type="button"
-                      className="auth-role-card"
+                      className="auth-role-card flex items-center p-4 rounded-xl border border-white/10 bg-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group text-left w-full h-[80px]"
                       onClick={() => {
                         setFormData({ ...formData, role: role.value });
                         setSignUpStep(2);
                       }}
                       id={`signup-role-${role.value.toLowerCase()}`}
                     >
-                      <span className="auth-role-icon">{role.icon}</span>
-                      <div className="auth-role-info">
-                        <p>{role.label}</p>
-                        <p>{role.description}</p>
+                      <span className="auth-role-icon w-10 h-10 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center text-xl mr-4 group-hover:shadow-[0_0_15px_rgba(52,211,153,0.3)] transition-shadow">
+                        {role.icon}
+                      </span>
+                      <div className="auth-role-info flex-1">
+                        <p className="text-white font-bold text-sm tracking-wide">{role.label}</p>
+                        <p className="text-slate-400 text-xs font-medium">{role.description}</p>
                       </div>
-                      <span className="auth-role-arrow"><ChevronRight /></span>
+                      <span className="auth-role-arrow text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all">
+                        <ChevronRight />
+                      </span>
                     </button>
                   ))}
 
-                  <p className="auth-switch-text" style={{ marginTop: '1.5rem' }}>
+                  <p className="auth-switch-text mt-8 text-slate-400 font-medium">
                     Already have an account?{' '}
-                    <button type="button" onClick={() => setIsSignUpMode(false)}>
+                    <button
+                      type="button"
+                      onClick={() => setIsSignUpMode(false)}
+                      className="text-emerald-400 font-bold hover:text-emerald-300 hover:underline transition-colors focus:outline-none"
+                    >
                       Sign in
                     </button>
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="auth-step-header">
+                  <div className="auth-step-header flex items-center justify-between w-full max-w-[380px] mb-6">
                     <button
                       type="button"
-                      className="auth-back-btn"
+                      className="auth-back-btn flex items-center gap-2 text-slate-400 hover:text-emerald-400 transition-colors text-sm font-medium"
                       onClick={() => setSignUpStep(1)}
                     >
                       <ChevronLeft /> Back
                     </button>
-                    <span className="auth-role-badge">
+                    <span className="auth-role-badge flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold">
                       {selectedRole?.icon} {selectedRole?.label}
                     </span>
                   </div>
 
-                  <div className="auth-input-field">
-                    <UserIcon />
+                  <div className="auth-input-field relative w-full h-[55px] rounded-xl mb-4 bg-white/5 border border-white/10 hover:border-emerald-500/30 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all flex items-center px-4 shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+                    <div className="text-slate-400 mr-2 flex items-center justify-center">
+                      <UserIcon />
+                    </div>
                     <input
                       type="text"
                       name="name"
@@ -330,11 +347,14 @@ export function AuthPage({ defaultMode = 'signin' }) {
                       required
                       value={formData.name}
                       onChange={handleSignupChange}
+                      className="w-full bg-transparent text-white placeholder-slate-500 outline-none text-base"
                     />
                   </div>
 
-                  <div className="auth-input-field">
-                    <MailIcon />
+                  <div className="auth-input-field relative w-full h-[55px] rounded-xl mb-4 bg-white/5 border border-white/10 hover:border-emerald-500/30 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all flex items-center px-4 shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+                    <div className="text-slate-400 mr-2 flex items-center justify-center">
+                      <MailIcon />
+                    </div>
                     <input
                       type="email"
                       name="email"
@@ -342,11 +362,14 @@ export function AuthPage({ defaultMode = 'signin' }) {
                       required
                       value={formData.email}
                       onChange={handleSignupChange}
+                      className="w-full bg-transparent text-white placeholder-slate-500 outline-none text-base"
                     />
                   </div>
 
-                  <div className="auth-input-field">
-                    <PhoneIcon />
+                  <div className="auth-input-field relative w-full h-[55px] rounded-xl mb-4 bg-white/5 border border-white/10 hover:border-emerald-500/30 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all flex items-center px-4 shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+                    <div className="text-slate-400 mr-2 flex items-center justify-center">
+                      <PhoneIcon />
+                    </div>
                     <input
                       type="tel"
                       name="phone"
@@ -354,11 +377,14 @@ export function AuthPage({ defaultMode = 'signin' }) {
                       required
                       value={formData.phone}
                       onChange={handleSignupChange}
+                      className="w-full bg-transparent text-white placeholder-slate-500 outline-none text-base"
                     />
                   </div>
 
-                  <div className="auth-input-field">
-                    <LockIcon />
+                  <div className="auth-input-field relative w-full h-[55px] rounded-xl mb-4 bg-white/5 border border-white/10 hover:border-emerald-500/30 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all flex items-center px-4 shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+                    <div className="text-slate-400 mr-2 flex items-center justify-center">
+                      <LockIcon />
+                    </div>
                     <input
                       type="password"
                       name="password"
@@ -366,25 +392,32 @@ export function AuthPage({ defaultMode = 'signin' }) {
                       required
                       value={formData.password}
                       onChange={handleSignupChange}
+                      className="w-full bg-transparent text-white placeholder-slate-500 outline-none text-base"
                     />
                   </div>
                   {formData.password && (
-                    <div className="auth-strength-wrap">
-                      <div className="auth-strength-bar">
+                    <div className="auth-strength-wrap w-full max-w-[380px] mb-4">
+                      <div className="auth-strength-bar w-full h-1.5 bg-black/40 rounded-full border border-white/5 overflow-hidden">
                         <div
-                          className="auth-strength-fill"
+                          className="auth-strength-fill h-full rounded-full transition-all duration-500"
                           style={{
                             width: strength.width,
                             backgroundColor: strength.color,
+                            boxShadow: `0 0 10px ${strength.color}`
                           }}
                         />
                       </div>
-                      <div className="auth-strength-label">{strength.label}</div>
+                      <div className="auth-strength-label flex justify-between text-xs mt-1.5 font-medium" style={{ color: strength.color }}>
+                        <span className="text-slate-400">Password strength</span>
+                        <span>{strength.label}</span>
+                      </div>
                     </div>
                   )}
 
-                  <div className="auth-input-field">
-                    <LockIcon />
+                  <div className="auth-input-field relative w-full h-[55px] rounded-xl mb-4 bg-white/5 border border-white/10 hover:border-emerald-500/30 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/50 transition-all flex items-center px-4 shadow-[0_4px_15px_rgba(0,0,0,0.1)]">
+                    <div className="text-slate-400 mr-2 flex items-center justify-center">
+                      <LockIcon />
+                    </div>
                     <input
                       type="password"
                       name="confirmPassword"
@@ -392,17 +425,18 @@ export function AuthPage({ defaultMode = 'signin' }) {
                       required
                       value={formData.confirmPassword}
                       onChange={handleSignupChange}
+                      className="w-full bg-transparent text-white placeholder-slate-500 outline-none text-base"
                     />
                   </div>
                   {formData.confirmPassword && formData.confirmPassword !== formData.password && (
-                    <div className="auth-strength-label" style={{ color: '#fca5a5', maxWidth: 380, width: '100%', textAlign: 'left' }}>
+                    <div className="auth-strength-label text-xs font-medium mt-1 mb-3 text-left w-full max-w-[380px]" style={{ color: '#fca5a5' }}>
                       Passwords don't match
                     </div>
                   )}
 
                   <button
                     type="submit"
-                    className="auth-btn auth-solid"
+                    className="auth-btn auth-solid w-full max-w-[380px] h-[55px] rounded-xl bg-emerald-400 text-black font-black uppercase tracking-wider hover:bg-emerald-300 hover:shadow-[0_0_20px_rgba(52,211,153,0.4)] transition-all flex items-center justify-center mt-2 disabled:opacity-50 disabled:hover:shadow-none"
                     disabled={
                       signupLoading ||
                       (formData.confirmPassword && formData.confirmPassword !== formData.password)
@@ -418,9 +452,13 @@ export function AuthPage({ defaultMode = 'signin' }) {
                     )}
                   </button>
 
-                  <p className="auth-switch-text">
+                  <p className="auth-switch-text mt-8 text-slate-400 font-medium">
                     Already have an account?{' '}
-                    <button type="button" onClick={() => setIsSignUpMode(false)}>
+                    <button
+                      type="button"
+                      onClick={() => setIsSignUpMode(false)}
+                      className="text-emerald-400 font-bold hover:text-emerald-300 hover:underline transition-colors focus:outline-none"
+                    >
                       Sign in
                     </button>
                   </p>
@@ -435,38 +473,34 @@ export function AuthPage({ defaultMode = 'signin' }) {
           <div className="auth-panel auth-left-panel">
             <div className="auth-content">
               <div className="auth-panel-brand">
-                <span className="auth-panel-logo">A</span>
-                <span>ARENA<span className="auth-muted">HUB</span></span>
+                <span className="auth-panel-logo border-emerald-400/50 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)] bg-emerald-950/30">A</span>
+                <span>ARENA<span className="text-emerald-400 font-medium">HUB</span></span>
               </div>
-              <h3>New here?</h3>
-              <p>Join the platform that's redefining sports booking.</p>
+              <h3 className="text-2xl font-bold text-white mb-2">New here?</h3>
+              <p className="text-emerald-100/80 mb-6">Join the platform that's redefining sports booking.</p>
 
-              <div className="auth-panel-features">
-                {[
-                  { icon: '⚡', text: 'Instant booking with real-time availability' },
-                  { icon: '💳', text: 'Digital wallet — cashless, seamless payments' },
-                  { icon: '🏆', text: 'Join public games or host your own' },
-                ].map((f) => (
-                  <div key={f.text} className="auth-panel-feature">
-                    <span>{f.icon}</span>
-                    <span>{f.text}</span>
-                  </div>
-                ))}
+              <div className="auth-panel-image w-full max-w-sm mx-auto mb-6 relative group rounded-2xl overflow-hidden border border-emerald-500/20 shadow-[0_0_20px_rgba(52,211,153,0.15)] bg-black/40 shrink-0">
+                <div className="absolute inset-0 bg-emerald-500/10 group-hover:bg-transparent transition-all z-10 pointer-events-none" />
+                <img 
+                  src="https://images.unsplash.com/photo-1459865264687-595d652de67e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                  alt="Sports Venue" 
+                  className="w-full h-40 md:h-48 object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 block"
+                />
               </div>
 
-              <div className="auth-panel-stats">
-                <div className="auth-panel-stat">
-                  <strong>2,500+</strong>
-                  <span>Active Venues</span>
+              <div className="auth-panel-stats flex mt-6 border-t border-emerald-500/20 pt-4">
+                <div className="auth-panel-stat text-center px-4 border-r border-emerald-500/20">
+                  <strong className="block text-xl text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)] font-bold">2,500+</strong>
+                  <span className="text-xs text-emerald-200/60 uppercase tracking-wider font-medium">Active Venues</span>
                 </div>
-                <div className="auth-panel-stat">
-                  <strong>50K+</strong>
-                  <span>Players</span>
+                <div className="auth-panel-stat text-center px-4">
+                  <strong className="block text-xl text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)] font-bold">50K+</strong>
+                  <span className="text-xs text-emerald-200/60 uppercase tracking-wider font-medium">Players</span>
                 </div>
               </div>
 
               <button
-                className="auth-btn auth-transparent"
+                className="auth-btn auth-transparent !border-emerald-400 !text-emerald-400 hover:!bg-emerald-400 hover:!text-black transition-all duration-300 shadow-[0_0_15px_rgba(52,211,153,0.15)] hover:shadow-[0_0_25px_rgba(52,211,153,0.4)] mt-8"
                 onClick={() => { setIsSignUpMode(true); setSignUpStep(1); }}
               >
                 Sign up
@@ -477,25 +511,33 @@ export function AuthPage({ defaultMode = 'signin' }) {
           <div className="auth-panel auth-right-panel">
             <div className="auth-content">
               <div className="auth-panel-brand">
-                <span className="auth-panel-logo">A</span>
-                <span>ARENA<span className="auth-muted">HUB</span></span>
+                <span className="auth-panel-logo border-emerald-400/50 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)] bg-emerald-950/30">A</span>
+                <span>ARENA<span className="text-emerald-400 font-medium">HUB</span></span>
               </div>
-              <h3>One of us?</h3>
-              <p>Welcome back. Sign in to book your next game and hit the pitch.</p>
+              <h3 className="text-2xl font-bold text-white mb-4">One of us?</h3>
 
-              <div className="auth-panel-stats">
-                <div className="auth-panel-stat">
-                  <strong>15K+</strong>
-                  <span>Monthly Games</span>
+              <div className="auth-panel-image w-full max-w-sm mx-auto mb-4 relative group rounded-2xl overflow-hidden border border-emerald-500/20 shadow-[0_0_20px_rgba(52,211,153,0.15)] bg-black/40 shrink-0">
+                <div className="absolute inset-0 bg-emerald-500/10 group-hover:bg-transparent transition-all z-10 pointer-events-none" />
+                <img 
+                  src="https://images.unsplash.com/photo-1575361204480-aadea25e6e68?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                  alt="Football players sharing a moment" 
+                  className="w-full h-40 md:h-48 object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 block"
+                />
+              </div>
+
+              <div className="auth-panel-stats flex mt-4 border-t border-emerald-500/20 pt-4">
+                <div className="auth-panel-stat text-center px-4 border-r border-emerald-500/20">
+                  <strong className="block text-xl text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)] font-bold">15K+</strong>
+                  <span className="text-xs text-emerald-200/60 uppercase tracking-wider font-medium">Monthly Games</span>
                 </div>
-                <div className="auth-panel-stat">
-                  <strong>4.9★</strong>
-                  <span>App Rating</span>
+                <div className="auth-panel-stat text-center px-4">
+                  <strong className="block text-xl text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)] font-bold">4.9★</strong>
+                  <span className="text-xs text-emerald-200/60 uppercase tracking-wider font-medium">App Rating</span>
                 </div>
               </div>
 
               <button
-                className="auth-btn auth-transparent"
+                className="auth-btn auth-transparent !border-emerald-400 !text-emerald-400 hover:!bg-emerald-400 hover:!text-black transition-all duration-300 shadow-[0_0_15px_rgba(52,211,153,0.15)] hover:shadow-[0_0_25px_rgba(52,211,153,0.4)] mt-8"
                 onClick={() => setIsSignUpMode(false)}
               >
                 Sign in

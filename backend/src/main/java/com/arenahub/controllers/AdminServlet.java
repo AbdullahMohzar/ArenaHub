@@ -18,9 +18,47 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles HTTP requests for admin operations
+ *    - Entry point for system administrator actions
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in admin management (users, disputes, refunds)
+ *    - Only class handling administrative business logic
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Simplifies complex admin operations
+ *    - Hides: user queries, dispute resolution, refund processing
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - GET /users strategy: list all users
+ *    - GET /disputes strategy: list booking disputes
+ *    - PUT /users strategy: BAN, UNBAN, PROMOTE_OWNER users
+ *    - POST /refund strategy: process refunds for disputed bookings
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - doGet() handles query operations
+ *    - doPut() handles user management
+ *    - doPost() handles refund transactions
+ * 
+ * ✅ PROTECTED VARIATIONS (GRASP):\n *    - Central place for all admin operations
+ *    - Easy to audit admin actions by checking this servlet
+ */
+
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request/response handling and servlet lifecycle management
+ */
 @WebServlet("/api/admin/*")
 public class AdminServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private method - hides CORS header configuration from outside access
+     * Maintains information hiding by restricting header setup implementation details
+     */
     private void setAccessControlHeaders(HttpServletResponse resp) {
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS");
@@ -33,6 +71,14 @@ public class AdminServlet extends HttpServlet {
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /**
+     * UC-14: Manage User Accounts - GET /users & UC-15: Resolve Booking Dispute - GET /disputes
+     * Allows system administrators to view users and disputed bookings
+     * 
+     * POLYMORPHISM: Override - doGet() for admin dashboard data retrieval
+     * INTERFACE: Connection & PreparedStatement abstract database operations
+     * ABSTRACTION: Admin queries hidden behind JDBC interfaces
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -43,6 +89,7 @@ public class AdminServlet extends HttpServlet {
         if (path == null) path = "";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
+            // UC-14: List all users for admin management
             if ("/users".equals(path)) {
                 String sql = "SELECT UserID, FullName, Email, UserRole, Status, CreatedAt FROM Users ORDER BY CreatedAt DESC";
                 try (PreparedStatement stmt = conn.prepareStatement(sql);
@@ -60,6 +107,7 @@ public class AdminServlet extends HttpServlet {
                     }
                     resp.getWriter().write(arr.toString());
                 }
+            // UC-15: List all disputed bookings (cancelled but payment was paid)
             } else if ("/disputes".equals(path)) {
                 String sql = "SELECT b.BookingID, b.UserID, b.BookingDate, b.Status, b.PaymentStatus, t.Name AS TurfName, t.PricePerHour, u.FullName " +
                              "FROM Bookings b " +
@@ -91,6 +139,14 @@ public class AdminServlet extends HttpServlet {
         }
     }
 
+    /**
+     * UC-14: Manage User Accounts - PUT /users
+     * Allows system administrators to perform BAN, UNBAN, PROMOTE_OWNER actions
+     * 
+     * POLYMORPHISM: Override - doPut() for admin user management actions
+     * INTERFACE: Connection & PreparedStatement provide database abstraction
+     * ABSTRACTION: Admin update operations hidden behind SQL interface
+     */
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -107,6 +163,7 @@ public class AdminServlet extends HttpServlet {
 
                 try (Connection conn = DatabaseConnection.getConnection()) {
                     int updatedRows = 0;
+                    // UC-14: User management actions - BAN, UNBAN, PROMOTE_OWNER
                     if ("BAN".equals(action)) {
                         String sql = "UPDATE Users SET Status = 'BANNED' WHERE UserID = ?";
                         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -146,6 +203,15 @@ public class AdminServlet extends HttpServlet {
         }
     }
 
+    /**
+     * UC-15: Resolve Booking Dispute - POST /refund
+     * Allows system administrators to process refunds for disputed bookings
+     * Updates booking payment status to REFUNDED and credits user wallet
+     * 
+     * POLYMORPHISM: Override - doPost() for refund transaction processing
+     * INTERFACE: Connection interface abstracts database transaction management
+     * ABSTRACTION: Transaction logic and refund processing hidden behind interface
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -164,6 +230,19 @@ public class AdminServlet extends HttpServlet {
                 try (Connection conn = DatabaseConnection.getConnection()) {
                     conn.setAutoCommit(false);
                     try {
+                        ensureWalletTransactionTypes(conn);
+
+                        int ownerId = -1;
+                        String ownerSql = "SELECT t.OwnerID FROM Bookings b JOIN Turfs t ON b.TurfID = t.TurfID WHERE b.BookingID = ?";
+                        try (PreparedStatement ownerStmt = conn.prepareStatement(ownerSql)) {
+                            ownerStmt.setInt(1, bookingId);
+                            try (ResultSet rs = ownerStmt.executeQuery()) {
+                                if (rs.next()) {
+                                    ownerId = rs.getInt("OwnerID");
+                                }
+                            }
+                        }
+
                         String markSql = "UPDATE Bookings SET PaymentStatus = 'REFUNDED' WHERE BookingID = ?";
                         try (PreparedStatement stmt = conn.prepareStatement(markSql)) {
                             stmt.setInt(1, bookingId);
@@ -194,6 +273,24 @@ public class AdminServlet extends HttpServlet {
                             txnStmt.executeUpdate();
                         }
 
+                        if (ownerId > 0) {
+                            String ownerWalletSql = "UPDATE Wallets SET Balance = Balance - ? WHERE UserID = ?";
+                            try (PreparedStatement ownerStmt = conn.prepareStatement(ownerWalletSql)) {
+                                ownerStmt.setDouble(1, amount);
+                                ownerStmt.setInt(2, ownerId);
+                                ownerStmt.executeUpdate();
+                            }
+
+                            String ownerTxnSql = "INSERT INTO WalletTransactions (WalletID, TransactionType, Amount, Description) " +
+                                                 "SELECT WalletID, 'REFUND_REVERSAL', ?, ? FROM Wallets WHERE UserID = ?";
+                            try (PreparedStatement ownerTxnStmt = conn.prepareStatement(ownerTxnSql)) {
+                                ownerTxnStmt.setDouble(1, amount);
+                                ownerTxnStmt.setString(2, "Refund reversal for booking #" + bookingId);
+                                ownerTxnStmt.setInt(3, ownerId);
+                                ownerTxnStmt.executeUpdate();
+                            }
+                        }
+
                         conn.commit();
                         resp.setStatus(HttpServletResponse.SC_OK);
                         resp.getWriter().write("{\"message\":\"Refund processed successfully!\"}");
@@ -208,6 +305,13 @@ public class AdminServlet extends HttpServlet {
                 resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 resp.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
             }
+        }
+    }
+
+    private void ensureWalletTransactionTypes(Connection conn) throws SQLException {
+        String alterSql = "ALTER TABLE WalletTransactions MODIFY COLUMN TransactionType ENUM('TOP_UP','BOOKING_PAYMENT','REFUND','EQUIPMENT_RENTAL','BOOKING_EARNING','REFUND_REVERSAL') NOT NULL";
+        try (PreparedStatement stmt = conn.prepareStatement(alterSql)) {
+            stmt.executeUpdate();
         }
     }
 }

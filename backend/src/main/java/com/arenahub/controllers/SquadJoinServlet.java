@@ -17,9 +17,46 @@ import com.arenahub.utils.DatabaseConnection;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+/**
+ * GRASP & GOF DESIGN PATTERNS USED:
+ * 
+ * ✅ CONTROLLER PATTERN (GRASP):
+ *    - Handles HTTP POST requests for joining public games
+ *    - Coordinates between player requests and booking database
+ * 
+ * ✅ INFORMATION EXPERT (GRASP):
+ *    - Domain expert in squad/team joining logic
+ *    - Knows validation, capacity checks, player addition rules
+ * 
+ * ✅ FACADE PATTERN (GOF):
+ *    - Simplifies complex game joining operations
+ *    - Hides: booking validation, player count checks, duplicate prevention
+ *    - Clients see simple POST /api/squad/join, complexity hidden
+ * 
+ * ✅ STRATEGY PATTERN (GOF):
+ *    - POST strategy: add player to public game booking
+ *    - Validates visibility, payment, capacity before adding
+ * 
+ * ✅ TEMPLATE METHOD PATTERN (GOF):
+ *    - doPost() implements specific game-joining algorithm
+ * 
+ * ✅ TRANSACTION PATTERN:
+ *    - conn.setAutoCommit(false) ensures atomic operations
+ *    - Either player fully joins (including capacity update) or not at all
+ *    - Prevents race conditions and data inconsistency
+ */
+
+/**
+ * INHERITANCE: Extends HttpServlet (parent class from javax.servlet)
+ * Inherits HTTP request handling and servlet lifecycle capabilities
+ */
 @WebServlet("/api/squad/join")
 public class SquadJoinServlet extends HttpServlet {
 
+    /**
+     * ENCAPSULATION: Private method - hides CORS header configuration
+     * Restricts direct access to internal header logic from external classes
+     */
     private void setAccessControlHeaders(HttpServletResponse resp) {
         resp.setHeader("Access-Control-Allow-Origin", "*");
         resp.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -32,6 +69,14 @@ public class SquadJoinServlet extends HttpServlet {
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
+    /**
+     * UC-06: Join a Public Game
+     * Allows individual players to join a public game booking
+     * 
+     * POLYMORPHISM: Override - doPost() with custom game join logic
+     * INTERFACE: Connection, PreparedStatement provide database abstraction
+     * ABSTRACTION: Business logic separated from database implementation details
+     */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setAccessControlHeaders(resp);
@@ -52,8 +97,10 @@ public class SquadJoinServlet extends HttpServlet {
             int bookingId = jsonRequest.get("bookingId").getAsInt();
             int userId = jsonRequest.get("userId").getAsInt();
 
+            // INTERFACE: Connection interface provides database abstraction
+            // ENCAPSULATION: Database transaction logic is private to this method
             try (Connection conn = DatabaseConnection.getConnection()) {
-                conn.setAutoCommit(false); // Atomic SQL updates
+                conn.setAutoCommit(false); // ABSTRACTION: Transaction management abstracted by Connection interface
 
                 // 1. Verify booking exists and is CONFIRMED & PAID
                 String bookingSql = "SELECT Status, PaymentStatus, Visibility, MaxPlayers, CurrentPlayers FROM Bookings WHERE BookingID = ?";
