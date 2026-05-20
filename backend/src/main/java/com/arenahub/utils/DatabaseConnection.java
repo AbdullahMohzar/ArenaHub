@@ -71,14 +71,20 @@ public class DatabaseConnection {
             throw new SQLException("DATABASE_URL environment variable is missing.");
         }
         
-        // Convert Neon/Vercel postgres:// or postgresql:// URL to JDBC format
-        String jdbcUrl = DATABASE_URL;
-        if (jdbcUrl.startsWith("postgres://")) {
-            jdbcUrl = jdbcUrl.replaceFirst("postgres://", "jdbc:postgresql://");
-        } else if (jdbcUrl.startsWith("postgresql://")) {
-            jdbcUrl = jdbcUrl.replaceFirst("postgresql://", "jdbc:postgresql://");
-        }
+        try {
+            java.net.URI dbUri = new java.net.URI(DATABASE_URL);
+            
+            String username = dbUri.getUserInfo().split(":")[0];
+            String password = dbUri.getUserInfo().split(":")[1];
+            
+            String dbUrl = "jdbc:postgresql://" + dbUri.getHost() + ':' + 
+                    (dbUri.getPort() != -1 ? dbUri.getPort() : 5432) + 
+                    dbUri.getPath() + 
+                    (dbUri.getQuery() != null ? "?" + dbUri.getQuery() : "");
 
-        return DriverManager.getConnection(jdbcUrl);
+            return DriverManager.getConnection(dbUrl, username, password);
+        } catch (java.net.URISyntaxException e) {
+            throw new SQLException("Unable to parse DATABASE_URL", e);
+        }
     }
 }
