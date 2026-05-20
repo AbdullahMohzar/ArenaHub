@@ -3,6 +3,7 @@ package com.arenahub.utils;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+
 import io.github.cdimascio.dotenv.Dotenv;
 
 /**
@@ -29,12 +30,28 @@ import io.github.cdimascio.dotenv.Dotenv;
  */
 public class DatabaseConnection {
     
-    // Using dotenv-java to load environment variables pulled from Vercel
-    private static final Dotenv dotenv = Dotenv.configure()
-            .directory("../arenahub") // point to where .env.development.local is
-            .filename(".env.development.local")
-            .ignoreIfMissing()
-            .load();
+    private static Dotenv loadDotenv() {
+        String[] paths = {
+            "../arenahub",          // When running from backend folder
+            "../../arenahub",       // When running from target/tomcat
+            "../../../arenahub",
+            "arenahub"
+        };
+        
+        for (String path : paths) {
+            try {
+                return Dotenv.configure()
+                    .directory(path)
+                    .filename(".env.development.local")
+                    .load();
+            } catch (Exception e) {
+                // Ignore and try next path
+            }
+        }
+        return Dotenv.configure().ignoreIfMissing().load();
+    }
+
+    private static final Dotenv dotenv = loadDotenv();
     
     private static final String DATABASE_URL = dotenv.get("DATABASE_URL") != null ? 
             dotenv.get("DATABASE_URL") : System.getenv("DATABASE_URL");
